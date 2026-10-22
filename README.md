@@ -1,25 +1,48 @@
 # SolarRoofGIS
 
-Project for exploring rooftop solar potential in Kabupaten Bogor and Kota Bogor. The repository contains the backend API, a minimal React + Next.js frontend scaffold, and the clipped photovoltaic GeoTIFF layers. The Google building GeoPackage is about 667 MB and is shared separately rather than stored in Git.
+Project for exploring rooftop solar potential in Kabupaten Bogor and Kota Bogor. The repository uses the same framework split as the choropleth reference project: Create React App + React Leaflet for the frontend, and Express.js + `pg` for the PostGIS API.
 
 ## Project layout
 
 ```text
 SolarRoofGIS/
-├── backend/       # Python API for PostGIS
-├── data_bogor/    # Bogor photovoltaic GeoTIFF layers
-└── frontend/      # React + Next.js App Router scaffold
+├── backend/       # Express.js API for PostGIS
+├── frontend/      # Create React App + React Leaflet
+└── data_bogor/    # Bogor photovoltaic GeoTIFF layers
 ```
 
-`ref/` holds local-only scripts, the layer-checking webmap, source data, and documents. It is excluded from Git.
+`ref/` holds local-only scripts, the separate layer-checking webmap, source data, and documents. It is excluded from Git. The approximately 667 MB Google building GeoPackage is shared separately rather than stored in the repository.
 
-## Backend
+## Run locally
 
-The API reads the `public.buildings_google` table from a PostgreSQL database with PostGIS enabled. The Bogor administrative-boundary table is named `public.batas_bogor`; the current API does not query it. Install the Python packages with `python3 -m pip install -r backend/requirements.txt`, configure the `PGHOST`, `PGPORT`, `PGDATABASE`, and `PGUSER` environment variables, then run `python3 backend/server.py`.
+Start the backend in one terminal:
 
-On this device, the database is `SolarRoofGIS` on `127.0.0.1:5433`. Keep its password in `~/.pgpass`, not in this repository. The API provides `/api/health` and `/api/buildings`.
+```bash
+cd backend
+cp .env.example .env
+# Set DB_PASSWORD in .env
+npm install
+npm run dev
+```
 
-To load the separately shared Google building GeoPackage, connect QGIS to the target PostGIS database and import it as `public.buildings_google`. The database user needs permission to create the table.
+The API listens on `http://localhost:5000`. Start the frontend separately:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+The frontend opens at `http://localhost:3000`.
+
+## PostGIS API
+
+The API reads `public.buildings_google` from PostgreSQL with PostGIS enabled. The administrative-boundary table is named `public.batas_bogor`; the current API does not query it. Available routes:
+
+- `GET /api/health`
+- `GET /api/buildings?dataset=google&bbox=west,south,east,north&zoom=16`
+
+The building endpoint clips requests to the Bogor study bounds, returns up to 2,500 features, and only returns buildings from zoom 15.5 and closer. Import the separately shared Google building GeoPackage through QGIS as `public.buildings_google`.
 
 ## Photovoltaic data
 

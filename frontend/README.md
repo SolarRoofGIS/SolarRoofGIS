@@ -1,14 +1,14 @@
 # Frontend
 
-Minimal React scaffold using Next.js App Router. It is separate from the local layer-checking webmap in `ref/tools/webmap/`.
+Create React App frontend using React Leaflet. The Express/PostGIS API is in `../backend`, and the separate data-checking webmap remains in `ref/tools/webmap/`.
 
 ## Run locally
 
-Requires Node.js 20.9 or newer.
+Requires Node.js 20 or newer.
 
 ```bash
 npm install
-npm run dev
+npm start
 ```
 
-Open the local URL printed by Next.js, usually `http://localhost:3000`.
+Open `http://localhost:3000`. The starter map is centered on Bogor and uses OpenStreetMap tiles.

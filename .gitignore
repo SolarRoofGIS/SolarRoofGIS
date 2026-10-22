@@ -18,9 +18,13 @@
 
 # JavaScript build and local configuration.
 /frontend/node_modules/
+/frontend/build/
 /frontend/.next/
 /frontend/out/
 /frontend/.vercel/
+/backend/node_modules/
+/backend/.env
+/backend/.next/
 /ref/tools/webmap/node_modules/
 /ref/tools/webmap/dist/
 **/.env
