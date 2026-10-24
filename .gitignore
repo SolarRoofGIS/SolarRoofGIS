@@ -9,6 +9,10 @@
 /data_bogor/bangunan_microsoft.gpkg
 /data_bogor/bangunan_microsoft.complete.json
 /data_bogor/bangunan_google.complete.json
+/data_bogor/bogor_buildings.geojson
+/data_bogor/solar_atlas.asc
+/data_bogor/solar_atlas.asc.aux.xml
+/data_bogor/photovoltaic/**/*.aux.xml
 /data_bogor/batas_bogor_big.gpkg
 /data_bogor/batas_bogor_big.geojson
 /data_bogor/validation.json

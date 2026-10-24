@@ -20,7 +20,7 @@ export default function App() {
         </div>
       </main>
       <footer className="app-footer">
-        Building data will be served from the PostGIS API.
+        Google building footprints are loaded from PostGIS when you zoom in.
       </footer>
     </div>
   );

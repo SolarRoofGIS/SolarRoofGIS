@@ -37,12 +37,12 @@ The frontend opens at `http://localhost:3000`.
 
 ## PostGIS API
 
-The API reads `public.buildings_google` from PostgreSQL with PostGIS enabled. The administrative-boundary table is named `public.batas_bogor`; the current API does not query it. Available routes:
+The API reads `public.bogor_buildings` from PostgreSQL with PostGIS enabled. The administrative-boundary table is named `public.batas_bogor`; the current API does not query it. Available routes:
 
 - `GET /api/health`
 - `GET /api/buildings?dataset=google&bbox=west,south,east,north&zoom=16`
 
-The building endpoint clips requests to the Bogor study bounds, returns up to 2,500 features, and only returns buildings from zoom 15.5 and closer. Import the separately shared Google building GeoPackage through QGIS as `public.buildings_google`.
+The building endpoint clips requests to the Bogor study bounds, returns up to 2,500 features, and only returns buildings from zoom 15.5 and closer. Import the separately shared Google building GeoPackage through QGIS as `public.bogor_buildings`.
 
 ## Photovoltaic data
 

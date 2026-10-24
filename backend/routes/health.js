@@ -9,7 +9,7 @@ router.get("/", async (_request, response) => {
       'SELECT current_database() AS database, PostGIS_Full_Version() AS "postgisVersion"',
     );
     const { rows: tableRows } = await pool.query(
-      "SELECT to_regclass('public.buildings_google') IS NOT NULL AS available",
+      "SELECT to_regclass('public.bogor_buildings') IS NOT NULL AS available",
     );
     const available = tableRows[0].available;
 

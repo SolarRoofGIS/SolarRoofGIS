@@ -85,6 +85,24 @@
   font-size: 12px;
 }
 
+.building-status {
+  position: absolute;
+  z-index: 400;
+  bottom: 16px;
+  left: 16px;
+  max-width: min(440px, calc(100% - 32px));
+  padding: 9px 12px;
+  border: 1px solid rgb(23 58 53 / 12%);
+  border-radius: 8px;
+  color: #29433b;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 2px 8px rgb(24 43 38 / 14%);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
 .app-footer {
   padding: 7px 15px;
   color: #52635d;

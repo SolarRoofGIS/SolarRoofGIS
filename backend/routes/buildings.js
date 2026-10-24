@@ -59,7 +59,7 @@ router.get("/", async (request, response) => {
        SELECT b.id,
               ST_AsGeoJSON(b.geom, 6) AS geometry,
               to_jsonb(b) - 'geom' - 'id' AS properties
-       FROM public.buildings_google AS b
+       FROM public.bogor_buildings AS b
        CROSS JOIN query_box AS q
        WHERE b.geom && q.geom
          AND ST_Intersects(b.geom, q.geom)
