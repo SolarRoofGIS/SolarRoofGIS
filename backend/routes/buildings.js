@@ -1,5 +1,7 @@
 const express = require("express");
 const pool = require("../db");
+const pvout = require("../pvout");
+const solar = require("../solar");
 
 const router = express.Router();
 const MAX_FEATURES = 2500;
@@ -67,13 +69,20 @@ router.get("/", async (request, response) => {
       [west, south, east, north, MAX_FEATURES + 1],
     );
 
+    const raster = await pvout.rastersReady.catch(() => null);
     const truncated = rows.length > MAX_FEATURES;
-    const features = rows.slice(0, MAX_FEATURES).map((row) => ({
-      type: "Feature",
-      id: row.id,
-      properties: row.properties || {},
-      geometry: typeof row.geometry === "string" ? JSON.parse(row.geometry) : row.geometry,
-    }));
+    const features = rows.slice(0, MAX_FEATURES).map((row) => {
+      const properties = row.properties || {};
+      return {
+        type: "Feature",
+        id: row.id,
+        properties: {
+          ...properties,
+          pvout: raster ? pvout.sample(raster.annual, properties.longitude, properties.latitude) : null,
+        },
+        geometry: typeof row.geometry === "string" ? JSON.parse(row.geometry) : row.geometry,
+      };
+    });
 
     return response.json({
       type: "FeatureCollection",
@@ -81,12 +90,83 @@ router.get("/", async (request, response) => {
       count: features.length,
       truncated,
       limit: MAX_FEATURES,
+      pvoutRange: raster ? raster.range : null,
       dataset,
       bbox: [west, south, east, north],
       elapsedMs: Math.round(performance.now() - started),
     });
   } catch (error) {
     console.error(`Building query failed for ${dataset}:`, error);
+    return response.status(500).json({
+      error: "Data PostGIS tidak dapat dibaca.",
+      ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+    });
+  }
+});
+
+router.get("/:id", async (request, response) => {
+  const id = Number(request.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return response.status(400).json({ error: "ID bangunan tidak valid." });
+  }
+
+  try {
+    // Areas are measured in UTM zone 48S (EPSG:32748), which covers all of Bogor.
+    const { rows } = await pool.query(
+      `WITH building AS (
+         SELECT b.*, ST_Transform(b.geom, 32748) AS geom_utm
+         FROM public.bogor_buildings AS b
+         WHERE b.id = $1
+       )
+       SELECT b.id,
+              b.latitude,
+              b.longitude,
+              b.confidence,
+              b.full_plus_code,
+              ST_AsGeoJSON(b.geom, 6)::json AS geometry,
+              ST_Area(b.geom_utm) AS footprint_m2,
+              ST_Area(ST_Buffer(b.geom_utm, -$2::float8)) AS setback_m2,
+              (SELECT a.wadmkk
+               FROM public.batas_bogor AS a
+               WHERE ST_Intersects(a.geom, ST_SetSRID(ST_MakePoint(b.longitude, b.latitude), 4326))
+               LIMIT 1) AS region
+       FROM building AS b`,
+      [id, solar.ASSUMPTIONS.setbackM],
+    );
+    if (rows.length === 0) {
+      return response.status(404).json({ error: "Bangunan tidak ditemukan." });
+    }
+
+    const building = rows[0];
+    const raster = await pvout.rastersReady.catch(() => null);
+    const at = (layer) => (raster ? pvout.sample(layer, building.longitude, building.latitude) : null);
+    const annualPvout = raster ? at(raster.annual) : null;
+
+    return response.json({
+      building: {
+        id: building.id,
+        latitude: building.latitude,
+        longitude: building.longitude,
+        confidence: building.confidence,
+        plusCode: building.full_plus_code,
+        region: building.region,
+        geometry: building.geometry,
+      },
+      solar: {
+        ...solar.estimateSolar({
+          footprintM2: building.footprint_m2,
+          setbackM2: building.setback_m2,
+          pvout: annualPvout,
+          monthlyPvout: raster ? raster.monthly.map(at) : Array(12).fill(null),
+          optimumTilt: raster ? at(raster.opta) : null,
+        }),
+        pvoutRank: raster ? pvout.rank(raster, annualPvout) : null,
+        pvoutRange: raster ? raster.range : null,
+      },
+      assumptions: { ...solar.ASSUMPTIONS, panelAreaM2: solar.PANEL_AREA_M2 },
+    });
+  } catch (error) {
+    console.error(`Building detail query failed for ${id}:`, error);
     return response.status(500).json({
       error: "Data PostGIS tidak dapat dibaca.",
       ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),

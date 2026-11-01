@@ -1,0 +1,668 @@
+/* A floating card over the map that grows with its content up to the map height;
+   the header stays put and the body scrolls inside it. */
+.sidebar {
+  position: absolute;
+  z-index: 5;
+  top: var(--panel-gap);
+  left: var(--panel-gap);
+  display: flex;
+  width: var(--panel-width);
+  max-height: calc(100% - var(--panel-gap) * 2);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: var(--ink);
+  background: rgb(255 255 255 / 97%);
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  line-height: 1.5;
+  backdrop-filter: blur(12px);
+}
+
+.sidebar h2,
+.sidebar h3,
+.sidebar p {
+  margin: 0;
+}
+
+.sidebar-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 14px 16px;
+}
+
+.sidebar:not(.sidebar-collapsed) .sidebar-head {
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar-head-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--orange-dark);
+  background: linear-gradient(135deg, var(--sun-soft), #ffe3b8);
+}
+
+.sidebar-head-icon.is-selected {
+  color: #fff;
+  background: linear-gradient(135deg, var(--forest), #2c6157);
+}
+
+.sidebar-head-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-kicker {
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sidebar-head h2 {
+  font-size: 16.5px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  color: var(--ink);
+  background: var(--mist);
+}
+
+.sidebar-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 16px 20px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.sidebar-muted {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.sidebar-loading,
+.sidebar-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.sidebar-loading {
+  color: var(--ink-soft);
+  background: var(--mist);
+}
+
+.sidebar-loading svg {
+  color: var(--orange);
+}
+
+.sidebar-error {
+  color: #a3341a;
+  background: #fdecea;
+}
+
+/* Guide shown before a roof is picked. */
+.intro-lead {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.intro-steps {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro-steps li {
+  display: flex;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.intro-steps strong {
+  font-size: 13.5px;
+}
+
+.intro-steps p {
+  margin-top: 1px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.intro-step-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--orange-dark);
+  background: var(--sun-soft);
+}
+
+.intro-cta {
+  width: 100%;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.sidebar-source {
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+
+/* Result card for the selected roof. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.hero-suitable {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(140deg, #f39a2b, var(--orange-dark));
+  box-shadow: 0 10px 24px rgb(185 71 11 / 25%);
+}
+
+.hero-suitable::after {
+  position: absolute;
+  top: -50px;
+  right: -40px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 236 170 / 55%), transparent 70%);
+  content: "";
+}
+
+.hero-unsuitable {
+  border: 1px solid var(--line);
+  background: var(--mist);
+}
+
+.hero-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.hero-unsuitable .hero-label {
+  color: var(--ink-soft);
+}
+
+.hero-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.hero-value small {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hero-unsuitable .hero-value {
+  color: var(--ink);
+  font-size: 22px;
+}
+
+.hero-sub {
+  font-size: 12.5px;
+  opacity: 0.92;
+}
+
+.hero-chips {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.hero-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 20%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hero-summary {
+  margin-top: 10px !important;
+  color: var(--ink-soft);
+}
+
+.sidebar-section {
+  margin-top: 22px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.section-title h3 {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.section-icon {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--forest);
+  background: var(--forest-soft);
+}
+
+/* Roof → electricity steps, joined by a line. */
+.flow {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-step {
+  position: relative;
+  display: flex;
+  gap: 11px;
+  padding-bottom: 14px;
+}
+
+.flow-step:not(:last-child)::after {
+  position: absolute;
+  top: 30px;
+  bottom: 2px;
+  left: 14px;
+  border-left: 2px dotted #f2c99a;
+  content: "";
+}
+
+.flow-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--orange-dark);
+  background: var(--sun-soft);
+}
+
+.flow-step-final .flow-icon {
+  color: #fff;
+  background: var(--orange-dark);
+}
+
+.flow-body {
+  min-width: 0;
+  flex: 1;
+  padding-top: 5px;
+}
+
+.flow-step-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.flow-step-head strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.flow-step-final .flow-step-head strong {
+  color: var(--orange-dark);
+  font-size: 14.5px;
+}
+
+.flow-step-note {
+  margin-top: 2px !important;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+
+.usable-bar {
+  height: 7px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.usable-bar div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(to right, #fdd248, var(--orange));
+}
+
+.level-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.level-high {
+  color: #fff;
+  background: var(--orange-dark);
+}
+
+.level-medium {
+  color: #7a3a10;
+  background: #fbc56d;
+}
+
+.level-low {
+  color: #6b5200;
+  background: #fff1a8;
+}
+
+.level-none {
+  color: var(--ink-soft);
+  background: var(--line);
+}
+
+.sunlight-value {
+  color: var(--ink-soft);
+}
+
+.sunlight-value strong {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.sunlight-scale {
+  position: relative;
+  margin: 8px 0 10px;
+}
+
+.sunlight-ramp {
+  height: 10px;
+  border-radius: 999px;
+}
+
+.sunlight-marker {
+  position: absolute;
+  top: -4px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--forest);
+  box-shadow: 0 2px 6px rgb(15 42 38 / 35%);
+}
+
+.sunlight-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.month-chart {
+  display: grid;
+  height: 116px;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 10px 8px 6px;
+  border-radius: 12px;
+  background: var(--mist);
+}
+
+.month-bar {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.month-bar-track {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  align-items: flex-end;
+}
+
+.month-bar-fill {
+  width: 100%;
+  border-radius: 4px 4px 1px 1px;
+  background: linear-gradient(to top, #fdd248, #f9a72b);
+}
+
+.month-bar-best .month-bar-fill {
+  background: linear-gradient(to top, var(--orange), var(--orange-dark));
+}
+
+.month-bar span {
+  color: var(--ink-faint);
+  font-size: 9.5px;
+  line-height: 12px;
+}
+
+.benefit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.benefit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.benefit-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 6px;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.benefit-icon-money {
+  color: #8a5a00;
+  background: var(--sun-soft);
+}
+
+.benefit-icon-co2 {
+  color: #1e6b4a;
+  background: #e2f4ea;
+}
+
+.benefit-label {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.benefit-card strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.benefit-note {
+  margin-top: 4px;
+  color: var(--ink-faint);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.sidebar-details-group {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.sidebar-details {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.sidebar-details summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.sidebar-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar-details summary svg:first-child {
+  color: var(--forest);
+}
+
+.details-chevron {
+  margin-left: auto;
+  color: var(--ink-faint);
+  transition: transform 0.2s;
+}
+
+.sidebar-details[open] .details-chevron {
+  transform: rotate(180deg);
+}
+
+.sidebar-details > :not(summary) {
+  margin-right: 12px;
+  margin-left: 12px;
+}
+
+.sidebar-details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.sidebar-details dt {
+  color: var(--ink-soft);
+}
+
+.sidebar-details dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dd-note {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.details-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--orange-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.details-link:hover {
+  text-decoration: underline;
+}
+
+.method-list {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-left: 18px;
+  color: var(--ink-soft);
+}
+
+.method-list li + li {
+  margin-top: 6px;
+}
+
+.sidebar-details > .sidebar-muted {
+  margin-bottom: 12px;
+}
+
+/* Phones: a bottom sheet that leaves the upper part of the map visible. */
+@media (max-width: 720px) {
+  .sidebar {
+    top: auto;
+    right: 8px;
+    /* Clear of the map attribution line. */
+    bottom: 26px;
+    left: 8px;
+    width: auto;
+    max-height: 56%;
+    border-radius: 18px;
+  }
+}

@@ -19,8 +19,6 @@ router.get("/", async (_request, response) => {
       database: rows[0].database,
       postgisVersion: rows[0].postgisVersion,
       datasets: { google: { available, features: null } },
-      minZoom: 15.5,
-      maxFeaturesPerLayer: 2500,
     });
   } catch (error) {
     console.error("PostGIS health check failed:", error);
@@ -29,8 +27,6 @@ router.get("/", async (_request, response) => {
       storage: "PostGIS",
       ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
       datasets: { google: { available: false } },
-      minZoom: 15.5,
-      maxFeaturesPerLayer: 2500,
     });
   }
 });

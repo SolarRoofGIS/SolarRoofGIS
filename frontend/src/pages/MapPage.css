@@ -1,0 +1,8 @@
+.map-page {
+  --panel-width: 384px;
+  --panel-gap: 14px;
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}

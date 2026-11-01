@@ -9,6 +9,7 @@
 /data_bogor/bangunan_microsoft.gpkg
 /data_bogor/bangunan_microsoft.complete.json
 /data_bogor/bangunan_google.complete.json
+/data_bogor/2e5_buildings.csv.gz
 /data_bogor/bogor_buildings.geojson
 /data_bogor/solar_atlas.asc
 /data_bogor/solar_atlas.asc.aux.xml
@@ -23,6 +24,8 @@
 # JavaScript build and local configuration.
 /frontend/node_modules/
 /frontend/build/
+# Copied from node_modules by `npm start` / `npm run build` (see frontend/package.json).
+/frontend/public/maplibre-gl-worker.mjs
 /frontend/.next/
 /frontend/out/
 /frontend/.vercel/

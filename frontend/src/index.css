@@ -1,3 +1,26 @@
+:root {
+  --ink: #15302b;
+  --ink-soft: #566a63;
+  --ink-faint: #82918c;
+  --forest: #173a35;
+  --forest-deep: #0f2a26;
+  --forest-soft: #e6efeb;
+  --mist: #f1f5f3;
+  --line: #e1e8e4;
+  --surface: #ffffff;
+  --page: #f6f7f3;
+  --sun: #f6c85f;
+  --sun-soft: #fff4d6;
+  --orange: #ef7a1c;
+  --orange-dark: #b9470b;
+  --shadow-sm: 0 2px 10px rgb(21 48 43 / 10%);
+  --shadow-md: 0 12px 32px rgb(21 48 43 / 16%);
+  --shadow-lg: 0 24px 60px rgb(15 42 38 / 22%);
+  --radius: 16px;
+  --header-height: 60px;
+  --content-width: 1120px;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,25 +28,27 @@
 html,
 body,
 #root {
-  width: 100%;
   min-width: 320px;
   height: 100%;
-  min-height: 100%;
   margin: 0;
 }
 
 body {
-  color: #1d3530;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.map-canvas {
-  width: 100%;
-  height: 100%;
-  min-height: calc(100vh - 100px);
+a {
+  color: inherit;
 }
 
-.leaflet-container {
-  background: #dfe8e5;
+button {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(239 122 28 / 55%);
+  outline-offset: 2px;
 }
