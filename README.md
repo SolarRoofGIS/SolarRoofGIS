@@ -15,6 +15,8 @@ SolarRoofGIS/
 
 ## Run locally
 
+Setting up from scratch (PostgreSQL + PostGIS, importing the building and boundary GeoPackages from the team's Google Drive with QGIS or ogr2ogr): see [SETUP.md](SETUP.md), in Indonesian.
+
 Start the backend in one terminal:
 
 ```bash
