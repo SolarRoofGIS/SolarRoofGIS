@@ -11,7 +11,7 @@ SolarRoofGIS/
 └── data_bogor/    # Bogor photovoltaic GeoTIFF layers
 ```
 
-`ref/` holds local-only scripts, the separate layer-checking webmap, source data, and documents. It is excluded from Git. The approximately 667 MB Google building GeoPackage is shared separately rather than stored in the repository.
+`ref/` (local-only scripts, the separate layer-checking webmap, and source data) and `docs/` (project charter, WBS, and reports) are excluded from Git. So is everything in `data_bogor/` except `photovoltaic/`: the building data (the approximately 700 MB Google building GeoPackage, the Open Buildings 2.5D CSV, the GeoJSON exports) and the boundary files are shared separately rather than stored in the repository.
 
 ## Run locally
 

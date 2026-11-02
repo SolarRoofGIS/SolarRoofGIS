@@ -1,25 +1,13 @@
-# Raw source data, archives, and local PostgreSQL data stay outside Git.
-/ref/data/
-/ref/zip/
+# Raw source data, archives, project documents, and local PostgreSQL data stay outside Git.
 /ref/
+/docs/
 /.postgres-data/
 
-# Large building data and local processing products stay outside Git.
-/data_bogor/bangunan_google.gpkg
-/data_bogor/bangunan_microsoft.gpkg
-/data_bogor/bangunan_microsoft.complete.json
-/data_bogor/bangunan_google.complete.json
-/data_bogor/2e5_buildings.csv.gz
-/data_bogor/bogor_buildings.geojson
-/data_bogor/solar_atlas.asc
-/data_bogor/solar_atlas.asc.aux.xml
+# Large building data and local processing products stay outside Git: everything in
+# data_bogor except the small Global Solar Atlas rasters the backend reads.
+/data_bogor/*
+!/data_bogor/photovoltaic/
 /data_bogor/photovoltaic/**/*.aux.xml
-/data_bogor/batas_bogor_big.gpkg
-/data_bogor/batas_bogor_big.geojson
-/data_bogor/validation.json
-/data_bogor/*.gpkg-wal
-/data_bogor/*.gpkg-shm
-/data_bogor/*.log
 
 # JavaScript build and local configuration.
 /frontend/node_modules/
