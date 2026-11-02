@@ -66,8 +66,8 @@ async function buildingTile(z, x, y) {
   return rows[0]?.tile;
 }
 
-// Grid cells with the number of buildings, their roof area, mean PVOUT, and the rough
-// yearly energy if every suitable roof were fitted with panels.
+// Grid cells with the number of buildings, their roof area, mean PVOUT (the cell color),
+// and the rough yearly energy if every suitable roof were fitted with panels.
 async function overviewTile(z, x, y) {
   const grid = await pvoutGridParams();
   const cell = overviewCellSize(z);
@@ -95,8 +95,6 @@ async function overviewTile(z, x, y) {
      ),
      features AS (
        SELECT count, area, pvout, mwh,
-              -- MWh per hectare, so the color means the same at every zoom.
-              round((mwh / ((111320 * $5) ^ 2 * cos(radians((cy + 0.5) * $5)) / 10000))::numeric, 1)::real AS density,
               ST_AsMVTGeom(
                 ST_Transform(ST_MakeEnvelope(cx * $5, cy * $5, (cx + 1) * $5, (cy + 1) * $5, 4326), 3857),
                 bounds.geom_3857, $4, 16, true

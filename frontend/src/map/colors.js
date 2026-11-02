@@ -1,16 +1,12 @@
-// Yellow → orange ramp: pale yellow for less sun (or potential), deep orange for the most.
+// Yellow → orange ramp: pale yellow for less sun, deep orange for the most.
 export const PVOUT_RAMP = ["#fff1a8", "#fdd248", "#f9a72b", "#ef7a1c", "#cf4f0c"];
 export const NO_DATA_COLOR = "#b9c2bf";
-
-// Overview cells, in MWh per hectare per year. Picked from the 10th–98th percentile of
-// ~110 m cells over Bogor (4, 36, 168, 422, 974), so dense kampung and suburbs differ.
-export const DENSITY_STOPS = [0, 50, 200, 450, 800];
 
 function rampExpression(input, stops) {
   return ["interpolate", ["linear"], input, ...stops.flatMap((stop, index) => [stop, PVOUT_RAMP[index]])];
 }
 
-// MapLibre fill-color for roofs, spread over the PVOUT color range from the API.
+// MapLibre fill-color for roofs and overview cells, spread over the PVOUT color range from the API.
 export function pvoutColorExpression(range) {
   if (!range) return NO_DATA_COLOR;
   const step = (range.max - range.min) / (PVOUT_RAMP.length - 1);
@@ -18,6 +14,12 @@ export function pvoutColorExpression(range) {
   return ["case", ["has", "pvout"], rampExpression(["get", "pvout"], stops), NO_DATA_COLOR];
 }
 
-export function densityColorExpression() {
-  return rampExpression(["get", "density"], DENSITY_STOPS);
+// The same ramp as pvoutColorExpression(), as [r, g, b] for drawing on a canvas.
+export function pvoutRgb(value, range) {
+  const channels = (hex) => [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16));
+  const last = PVOUT_RAMP.length - 1;
+  const position = Math.min(Math.max((value - range.min) / (range.max - range.min), 0), 1) * last;
+  const index = Math.min(Math.floor(position), last - 1);
+  const [from, to] = [channels(PVOUT_RAMP[index]), channels(PVOUT_RAMP[index + 1])];
+  return from.map((channel, i) => Math.round(channel + (to[i] - channel) * (position - index)));
 }

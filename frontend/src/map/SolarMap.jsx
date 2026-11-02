@@ -11,18 +11,19 @@ import {
 import {
   Building2,
   EyeOff,
-  Grid3x3,
   Layers,
   LoaderCircle,
   Map as MapIcon,
   MonitorX,
   Mountain,
   Satellite,
+  Sun,
   ZoomIn,
 } from "lucide-react";
-import { API_BASE_URL } from "../api";
+import { API_BASE_URL, fetchJson } from "../api";
 import { formatNumber } from "../format";
-import { DENSITY_STOPS, NO_DATA_COLOR, PVOUT_RAMP, densityColorExpression, pvoutColorExpression } from "./colors";
+import { PVOUT_RAMP, pvoutColorExpression } from "./colors";
+import { EMPTY_IMAGE, buildSolarOverlay } from "./solarOverlay";
 import "./SolarMap.css";
 
 // MapLibre 6 ships its worker as a separate module. Bundling it through webpack/Babel breaks
@@ -34,7 +35,7 @@ const STUDY_BOUNDS = [
   [106.401214, -6.788518],
   [107.227782, -6.302244],
 ];
-// Roof tiles exist from zoom 15; below that the map shows the summed grid cells.
+// Roof tiles exist from zoom 15; below that the map shows the PVOUT overlay.
 export const ROOF_ZOOM = 15;
 
 const BASEMAPS = [
@@ -48,11 +49,11 @@ const BUILDINGS_ATTRIBUTION = "Bangunan &copy; Google Open Buildings · PVOUT &c
 
 // Part of every tile URL. Browsers once kept tiles for a day; bumping this makes them fetch
 // fresh ones. The server now has browsers revalidate each tile, so re-imports show up anyway.
-const TILE_VERSION = 2;
+const TILE_VERSION = 3;
 
 // Layer settings the viewer can change, remembered in this browser.
 const SETTINGS_KEY = "solarroofgis.map-settings";
-const DEFAULT_SETTINGS = { basemap: "gray", roofs: true, cells: true, opacity: 0.9 };
+const DEFAULT_SETTINGS = { basemap: "gray", roofs: true, solar: true, roofOpacity: 0.9, solarOpacity: 0.8 };
 
 function loadSettings() {
   try {
@@ -63,15 +64,17 @@ function loadSettings() {
 }
 
 // Roofs fade in over the first half zoom level they appear at.
-function roofOpacity(opacity) {
+function roofFade(opacity) {
   return ["interpolate", ["linear"], ["zoom"], ROOF_ZOOM, 0.35 * opacity, ROOF_ZOOM + 0.4, opacity];
 }
 
-// Sparse cells stay see-through so the dense kampung and town centres stand out, and the
-// cells fade out as the roofs fade in.
-function cellOpacity(opacity) {
-  const byDensity = ["interpolate", ["linear"], ["get", "density"], 0, 0.33 * opacity, 50, 0.72 * opacity, 200, 0.94 * opacity];
-  return ["interpolate", ["linear"], ["zoom"], 8, byDensity, 14.6, byDensity, ROOF_ZOOM + 0.2, 0];
+// The overlay and the cells of buildings above it fade out as the roofs fade in.
+function solarFade(opacity) {
+  return ["interpolate", ["linear"], ["zoom"], 14.6, opacity, ROOF_ZOOM + 0.2, 0];
+}
+
+function cellFade(opacity) {
+  return ["interpolate", ["linear"], ["zoom"], 14.4, opacity, ROOF_ZOOM, 0];
 }
 
 function mapStyle() {
@@ -110,6 +113,17 @@ function mapStyle() {
         promoteId: { buildings: "id" },
         attribution: BUILDINGS_ATTRIBUTION,
       },
+      // Drawn in the browser from /api/pvout/grid once the map has loaded.
+      solar: {
+        type: "image",
+        url: EMPTY_IMAGE,
+        coordinates: [
+          [STUDY_BOUNDS[0][0], STUDY_BOUNDS[1][1]],
+          [STUDY_BOUNDS[1][0], STUDY_BOUNDS[1][1]],
+          [STUDY_BOUNDS[1][0], STUDY_BOUNDS[0][1]],
+          [STUDY_BOUNDS[0][0], STUDY_BOUNDS[0][1]],
+        ],
+      },
       boundary: { type: "geojson", data: `${API_BASE_URL}/api/boundaries` },
       selected: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
     },
@@ -123,14 +137,28 @@ function mapStyle() {
       },
       { id: "basemap-esri", type: "raster", source: "esri", layout: { visibility: "none" } },
       {
+        id: "solar-overlay",
+        type: "raster",
+        source: "solar",
+        maxzoom: ROOF_ZOOM + 0.5,
+        paint: {
+          "raster-opacity": solarFade(DEFAULT_SETTINGS.solarOpacity),
+          "raster-resampling": "linear",
+          "raster-fade-duration": 0,
+        },
+      },
+      // Cells with buildings, colored by their mean PVOUT over the overlay; hovering shows
+      // the buildings in a cell and clicking zooms to them.
+      {
         id: "overview-fill",
         type: "fill",
         source: "overview",
         "source-layer": "cells",
-        maxzoom: ROOF_ZOOM + 0.5,
+        maxzoom: ROOF_ZOOM,
         paint: {
-          "fill-color": densityColorExpression(),
-          "fill-opacity": cellOpacity(DEFAULT_SETTINGS.opacity),
+          "fill-color": pvoutColorExpression(null),
+          "fill-opacity": cellFade(DEFAULT_SETTINGS.roofOpacity),
+          "fill-antialias": false,
         },
       },
       {
@@ -152,7 +180,7 @@ function mapStyle() {
         minzoom: ROOF_ZOOM,
         paint: {
           "fill-color": pvoutColorExpression(null),
-          "fill-opacity": roofOpacity(DEFAULT_SETTINGS.opacity),
+          "fill-opacity": roofFade(DEFAULT_SETTINGS.roofOpacity),
         },
       },
       {
@@ -163,7 +191,7 @@ function mapStyle() {
         minzoom: ROOF_ZOOM + 0.5,
         paint: {
           "line-color": "#8a3a0a",
-          "line-opacity": 0.6 * DEFAULT_SETTINGS.opacity,
+          "line-opacity": 0.6 * DEFAULT_SETTINGS.roofOpacity,
           "line-width": ["interpolate", ["linear"], ["zoom"], 15.5, 0.3, 18, 1],
         },
       },
@@ -265,9 +293,11 @@ function buildingTooltip(properties) {
 
 function cellTooltip(properties) {
   return `<div class="map-tip">
+    <div class="map-tip-row"><span>PVOUT rata-rata</span><strong>${
+      properties.pvout == null ? "Tanpa data" : `${formatNumber(properties.pvout)} kWh/kWp`
+    }</strong></div>
     <div class="map-tip-row"><span>Bangunan</span><strong>${formatNumber(properties.count)}</strong></div>
     <div class="map-tip-row"><span>Potensi listrik</span><strong>${formatNumber(properties.mwh)} MWh/thn</strong></div>
-    <div class="map-tip-row"><span>Kepadatan</span><strong>${formatNumber(properties.density)} MWh/ha</strong></div>
     <p class="map-tip-hint">Klik untuk memperbesar ke atap</p>
   </div>`;
 }
@@ -297,6 +327,31 @@ function bindHover(map, popup, layerId, source, sourceLayer, render) {
     clear();
     popup.remove();
   });
+}
+
+// One layer's opacity, greyed out while that layer is switched off.
+function OpacitySlider({ id, label, settingKey, disabled = false, settings, set }) {
+  const value = settings[settingKey];
+  return (
+    <div className={`opacity-setting${disabled ? " is-disabled" : ""}`}>
+      <div className="opacity-setting-row">
+        <label htmlFor={id}>{label}</label>
+        <span>{Math.round(value * 100)}%</span>
+      </div>
+      <input
+        id={id}
+        className="opacity-slider"
+        type="range"
+        min="0.1"
+        max="1"
+        step="0.05"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => set(settingKey, Number(event.target.value))}
+        style={{ "--fill": `${((value - 0.1) / 0.9) * 100}%` }}
+      />
+    </div>
+  );
 }
 
 function MapSettings({ settings, onChange }) {
@@ -353,28 +408,14 @@ function MapSettings({ settings, onChange }) {
             <input type="checkbox" role="switch" checked={settings.roofs} onChange={(event) => set("roofs", event.target.checked)} />
             <i className="switch" aria-hidden="true" />
           </label>
+          <OpacitySlider id="roof-opacity" label="Opasitas atap" settingKey="roofOpacity" disabled={!settings.roofs} settings={settings} set={set} />
           <label className="settings-toggle">
-            <Grid3x3 size={16} />
-            <span>Kotak kawasan</span>
-            <input type="checkbox" role="switch" checked={settings.cells} onChange={(event) => set("cells", event.target.checked)} />
+            <Sun size={16} />
+            <span>Overlay energi surya</span>
+            <input type="checkbox" role="switch" checked={settings.solar} onChange={(event) => set("solar", event.target.checked)} />
             <i className="switch" aria-hidden="true" />
           </label>
-
-          <div className="settings-heading settings-heading-row">
-            <label htmlFor="layer-opacity">Opasitas lapisan</label>
-            <span>{Math.round(settings.opacity * 100)}%</span>
-          </div>
-          <input
-            id="layer-opacity"
-            className="opacity-slider"
-            type="range"
-            min="0.1"
-            max="1"
-            step="0.05"
-            value={settings.opacity}
-            onChange={(event) => set("opacity", Number(event.target.value))}
-            style={{ "--fill": `${((settings.opacity - 0.1) / 0.9) * 100}%` }}
-          />
+          <OpacitySlider id="solar-opacity" label="Opasitas energi surya" settingKey="solarOpacity" disabled={!settings.solar} settings={settings} set={set} />
         </div>
       )}
     </div>
@@ -382,31 +423,17 @@ function MapSettings({ settings, onChange }) {
 }
 
 function Legend({ zoom, pvoutRange }) {
-  const roofs = zoom >= ROOF_ZOOM;
-
   return (
     <div className="map-legend">
       <p className="map-legend-title">
-        {roofs ? "Intensitas sinar matahari di atap" : "Potensi listrik atap per kawasan"}
+        {zoom >= ROOF_ZOOM ? "Energi surya di atap (PVOUT)" : "Energi surya per tahun (PVOUT)"}
       </p>
       <div className="map-legend-ramp" style={{ background: `linear-gradient(to right, ${PVOUT_RAMP.join(", ")})` }} />
-      {roofs ? (
-        <div className="map-legend-labels">
-          <span>{pvoutRange ? formatNumber(pvoutRange.min) : "Rendah"}</span>
-          <span>{pvoutRange ? `${formatNumber(pvoutRange.max)} kWh/kWp·thn` : "Tinggi"}</span>
-        </div>
-      ) : (
-        <div className="map-legend-labels">
-          <span>{DENSITY_STOPS[0]}</span>
-          <span>{formatNumber(DENSITY_STOPS[DENSITY_STOPS.length - 1])}+ MWh/ha·thn</span>
-        </div>
-      )}
+      <div className="map-legend-labels">
+        <span>{pvoutRange ? formatNumber(pvoutRange.min) : "Rendah"}</span>
+        <span>{pvoutRange ? `${formatNumber(pvoutRange.max)} kWh/kWp·thn` : "Tinggi"}</span>
+      </div>
       <div className="map-legend-keys">
-        {roofs && (
-          <span>
-            <i className="legend-swatch" style={{ background: NO_DATA_COLOR }} /> Tanpa data
-          </span>
-        )}
         <span>
           <i className="legend-dash" /> Batas Kota & Kab. Bogor
         </span>
@@ -477,8 +504,24 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
   }, [supported]);
 
   useEffect(() => {
-    if (ready) mapRef.current.setPaintProperty("buildings-fill", "fill-color", pvoutColorExpression(pvoutRange));
+    if (!ready) return;
+    for (const id of ["overview-fill", "buildings-fill"]) {
+      mapRef.current.setPaintProperty(id, "fill-color", pvoutColorExpression(pvoutRange));
+    }
   }, [ready, pvoutRange]);
+
+  // The overlay and the roofs share one PVOUT scale, so the legend reads the same at every zoom.
+  useEffect(() => {
+    if (!ready) return undefined;
+    const controller = new AbortController();
+    Promise.all([
+      fetchJson("/api/pvout/grid", { signal: controller.signal }),
+      fetchJson("/api/boundaries", { signal: controller.signal }),
+    ])
+      .then(([grid, boundary]) => mapRef.current?.getSource("solar")?.updateImage(buildSolarOverlay(grid, boundary)))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [ready]);
 
   useEffect(() => {
     try {
@@ -488,7 +531,7 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
     }
   }, [settings]);
 
-  const { basemap, roofs, cells, opacity } = settings;
+  const { basemap, roofs, solar, roofOpacity, solarOpacity } = settings;
 
   useEffect(() => {
     if (!ready) return;
@@ -505,16 +548,16 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
     if (!ready) return;
     const map = mapRef.current;
     const visibility = (on) => (on ? "visible" : "none");
-    for (const id of ["buildings-fill", "buildings-line", "buildings-hover"]) {
+    // The cells are buildings too, summed per area at the zooms before the roofs show.
+    for (const id of ["overview-fill", "overview-hover", "buildings-fill", "buildings-line", "buildings-hover"]) {
       map.setLayoutProperty(id, "visibility", visibility(roofs));
     }
-    for (const id of ["overview-fill", "overview-hover"]) {
-      map.setLayoutProperty(id, "visibility", visibility(cells));
-    }
-    map.setPaintProperty("buildings-fill", "fill-opacity", roofOpacity(opacity));
-    map.setPaintProperty("buildings-line", "line-opacity", 0.6 * opacity);
-    map.setPaintProperty("overview-fill", "fill-opacity", cellOpacity(opacity));
-  }, [ready, roofs, cells, opacity]);
+    map.setLayoutProperty("solar-overlay", "visibility", visibility(solar));
+    map.setPaintProperty("buildings-fill", "fill-opacity", roofFade(roofOpacity));
+    map.setPaintProperty("buildings-line", "line-opacity", 0.6 * roofOpacity);
+    map.setPaintProperty("solar-overlay", "raster-opacity", solarFade(solarOpacity));
+    map.setPaintProperty("overview-fill", "fill-opacity", cellFade(roofOpacity));
+  }, [ready, roofs, solar, roofOpacity, solarOpacity]);
 
   useEffect(() => {
     if (!ready) return;

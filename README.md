@@ -33,7 +33,7 @@ npm install
 npm start
 ```
 
-The frontend opens at `http://localhost:3000` with three pages: Beranda (`/`, summary statistics and a live example roof), Peta (`/peta`, the map, with a Lapisan menu for the basemap, roof and grid layers on/off, and layer opacity, remembered per browser; `/peta?atap=<id>` opens a roof directly), and Tentang (`/tentang`, data, method, and limitations).
+The frontend opens at `http://localhost:3000` with three pages: Beranda (`/`, summary statistics and a live example roof), Peta (`/peta`, the map, with a Lapisan menu for the basemap, the roof polygons and solar overlay on/off, and a separate opacity for each, remembered per browser; `/peta?atap=<id>` opens a roof directly), and Tentang (`/tentang`, data, method, and limitations).
 
 MapLibre GL 6 ships its Web Worker as a separate module that breaks when webpack/Babel bundles it, so `npm start` and `npm run build` first copy `node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs` into `public/` (the copy is gitignored). The map needs a browser with WebGL2; without it the map page shows an explanation instead.
 
@@ -49,12 +49,13 @@ The API reads `public.bogor_buildings` and `public.batas_bogor` from PostgreSQL 
 - `GET /api/method` (calculation assumptions and PVOUT range, for the about page)
 - `GET /api/boundaries` (simplified Kota and Kabupaten Bogor outlines)
 - `GET /api/pvout` (color-scale range for the PVOUT legend)
+- `GET /api/pvout/grid` (annual PVOUT grid for the solar overlay on the zoomed-out map)
 - `GET /api/buildings?dataset=google&bbox=west,south,east,north&zoom=16` (GeoJSON by bounding box, max 2,500 features; no longer used by the frontend)
 
 The map draws all 2.67 million buildings from vector tiles that PostGIS builds with `ST_AsMVT`; the backend caches recent tiles in memory and sends them with `Cache-Control: no-cache`, so browsers revalidate (ETag, 304) and see a re-import after a reload. MapLibre parses tiles in Web Workers and draws them on the GPU, so panning and zooming stay smooth.
 
 - **Roofs (zoom 15+):** each roof carries `id`, `area` (m²), and `pvout` (kWh/kWp per year, from `data_bogor/photovoltaic/PVOUT.tif` at the building centroid) and is colored from yellow (lower) to orange (higher). Tiles exist for zoom 15–16 only: a zoom-14 tile over central Bogor already holds about 17,000 roofs (over 1 MB), and MapLibre overzooms the zoom-16 tiles (0.15 m precision) for closer views.
-- **Overview (zoom 8–14):** buildings are summed into square cells of about six screen pixels (0.002°, ~220 m, at zoom 11, halving per zoom), with the building count, roof area, mean PVOUT, and a rough yearly energy if every suitable roof had panels. Cells are colored by MWh per hectare per year. Clicking a cell zooms to its roofs. Zoom 8–11 tiles are built in the background when the server starts.
+- **Overview (zoom 8–14):** buildings are summed into square cells of about six screen pixels (0.002°, ~220 m, at zoom 11, halving per zoom), with the building count, roof area, mean PVOUT, and a rough yearly energy if every suitable roof had panels. Cells are colored by their mean PVOUT and belong to the roof layer in the Lapisan menu (its switch and opacity); hovering one shows its figures and clicking it zooms to its roofs. Cells without buildings are filled by a solar overlay underneath, the annual PVOUT grid (`/api/pvout/grid`) colored on the same scale, smoothed, and clipped to the Bogor boundary in the browser ([`frontend/src/map/solarOverlay.js`](frontend/src/map/solarOverlay.js)). Zoom 8–11 tiles are built in the background when the server starts.
 - **Summary statistics:** `/api/stats` counts buildings per region against the subdivided boundaries once at startup (about 15 s).
 
 The overview cells and the statistics use a fast approximation of the panel count that treats each roof as a square for the edge setback ([`backend/buildingSql.js`](backend/buildingSql.js)); the per-roof figures in the info panel buffer the real outline.

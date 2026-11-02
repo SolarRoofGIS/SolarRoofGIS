@@ -1,24 +1,4 @@
-import {
-  Banknote,
-  Building2,
-  Calculator,
-  CalendarDays,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  Leaf,
-  LoaderCircle,
-  MapPin,
-  MousePointerClick,
-  Navigation,
-  Ruler,
-  SolarPanel,
-  Sun,
-  TriangleAlert,
-  X,
-  Zap,
-  ZoomIn,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, LoaderCircle, X } from "lucide-react";
 import { formatNumber, formatRupiah, MONTH_NAMES } from "../format";
 import { PVOUT_RAMP } from "../map/colors";
 import "./Sidebar.css";
@@ -35,79 +15,46 @@ function sunlightLevel(rank) {
   return { label: "Rendah", tone: "low" };
 }
 
-function SectionTitle({ icon: Icon, children, aside }) {
+function SectionTitle({ children, aside }) {
   return (
     <div className="section-title">
-      <span className="section-icon" aria-hidden="true">
-        <Icon size={15} />
-      </span>
       <h3>{children}</h3>
       {aside}
     </div>
   );
 }
 
-const INTRO_STEPS = [
-  {
-    icon: ZoomIn,
-    title: "Perbesar peta",
-    text: "Kotak berwarna menunjukkan kawasan dengan potensi listrik atap tertinggi. Klik kotaknya untuk langsung ke atap.",
-  },
-  {
-    icon: Sun,
-    title: "Baca warnanya",
-    text: "Kuning berarti sinar matahari lebih rendah, oranye tua berarti lebih tinggi.",
-  },
-  {
-    icon: MousePointerClick,
-    title: "Klik sebuah atap",
-    text: "Lihat berapa panel yang muat, listrik yang dihasilkan, dan manfaatnya.",
-  },
-];
-
 function Intro({ onExplore }) {
   return (
     <div className="sidebar-intro">
-      <p className="intro-lead">
-        Perkiraan listrik dari panel surya di atap setiap bangunan di Kota dan Kabupaten Bogor.
-      </p>
+      <p>Perkiraan listrik dari panel surya di atap setiap bangunan di Kota dan Kabupaten Bogor.</p>
       <ol className="intro-steps">
-        {INTRO_STEPS.map(({ icon: Icon, title, text }) => (
-          <li key={title}>
-            <span className="intro-step-icon" aria-hidden="true">
-              <Icon size={17} />
-            </span>
-            <div>
-              <strong>{title}</strong>
-              <p>{text}</p>
-            </div>
-          </li>
-        ))}
+        <li>
+          Warna menunjukkan energi surya tahunan (PVOUT): kuning lebih rendah, oranye tua lebih tinggi. Dari
+          jauh terlihat overlay PVOUT Global Solar Atlas, setelah diperbesar warna tiap atap.
+        </li>
+        <li>Klik sebuah kawasan untuk memperbesar sampai bentuk atap terlihat.</li>
+        <li>Klik sebuah atap untuk melihat panel yang muat, listrik per tahun, dan manfaatnya.</li>
       </ol>
-      <button type="button" className="button button-primary intro-cta" onClick={onExplore}>
-        <Navigation size={17} /> Lihat contoh di pusat Kota Bogor
+      <button type="button" className="button button-outline intro-cta" onClick={onExplore}>
+        Lihat contoh di pusat Kota Bogor
       </button>
       <p className="sidebar-source">
-        Sumber: Google Open Buildings (bentuk atap) dan Global Solar Atlas (sinar matahari).
+        Sumber: Google Open Buildings (bentuk atap), Global Solar Atlas (PVOUT), BIG (batas wilayah).
       </p>
     </div>
   );
 }
 
-function FlowStep({ icon: Icon, label, value, note, children, final }) {
+function FlowStep({ label, value, note, children, final }) {
   return (
     <li className={`flow-step${final ? " flow-step-final" : ""}`}>
-      <span className="flow-icon" aria-hidden="true">
-        <Icon size={15} />
-      </span>
-      <div className="flow-body">
-        <div className="flow-step-head">
-          <span>{label}</span>
-          <strong>{value}</strong>
-        </div>
-        {children}
-        {note && <p className="flow-step-note">{note}</p>}
+      <div className="flow-step-head">
+        <span>{label}</span>
+        <strong>{value}</strong>
       </div>
+      {children}
+      {note && <p className="flow-step-note">{note}</p>}
     </li>
   );
 }
@@ -115,16 +62,14 @@ function FlowStep({ icon: Icon, label, value, note, children, final }) {
 function RoofToEnergy({ solar, assumptions }) {
   return (
     <section className="sidebar-section">
-      <SectionTitle icon={Calculator}>Dari atap ke listrik</SectionTitle>
+      <SectionTitle>Dari atap ke listrik</SectionTitle>
       <ol className="flow">
         <FlowStep
-          icon={Ruler}
           label="Luas atap"
           value={`${formatNumber(solar.footprintM2)} m²`}
           note="Luas bangunan dilihat dari atas (citra satelit)."
         />
         <FlowStep
-          icon={Building2}
           label="Bisa dipasangi panel"
           value={`${formatNumber(solar.usableM2)} m²`}
           note={`Sekitar ${formatNumber(solar.usableShare * 100)}% atap. Sisanya untuk jarak ${formatNumber(assumptions.setbackM, 1)} m dari tepi, tandon, kemiringan, atau bayangan.`}
@@ -134,13 +79,11 @@ function RoofToEnergy({ solar, assumptions }) {
           </div>
         </FlowStep>
         <FlowStep
-          icon={SolarPanel}
           label="Jumlah panel surya"
           value={`${formatNumber(solar.panelCount)} panel`}
           note={`Panel ${assumptions.panel.powerWp} Wp, ${formatNumber(assumptions.panel.widthM, 2)} × ${formatNumber(assumptions.panel.lengthM, 2)} m. Total ${formatNumber(solar.capacityKwp, 1)} kWp.`}
         />
         <FlowStep
-          icon={Zap}
           label="Listrik per tahun"
           value={`${formatNumber(solar.annualKwh)} kWh`}
           note={`${formatNumber(solar.capacityKwp, 1)} kWp × ${formatNumber(solar.pvout)} kWh per kWp di lokasi ini.`}
@@ -161,7 +104,7 @@ function Sunlight({ solar }) {
 
   return (
     <section className="sidebar-section">
-      <SectionTitle icon={Sun} aside={<span className={`level-badge level-${level.tone}`}>{level.label}</span>}>
+      <SectionTitle aside={<span className={`level-badge level-${level.tone}`}>{level.label}</span>}>
         Intensitas sinar matahari
       </SectionTitle>
       {solar.pvout === null ? (
@@ -204,7 +147,7 @@ function MonthlyChart({ monthlyKwh }) {
 
   return (
     <section className="sidebar-section">
-      <SectionTitle icon={CalendarDays}>Produksi per bulan</SectionTitle>
+      <SectionTitle>Produksi per bulan</SectionTitle>
       <div className="month-chart" role="img" aria-label="Grafik produksi listrik per bulan">
         {monthlyKwh.map((kwh, month) => (
           <div
@@ -231,31 +174,24 @@ function MonthlyChart({ monthlyKwh }) {
 function Benefits({ solar, assumptions }) {
   return (
     <section className="sidebar-section">
-      <SectionTitle icon={Leaf}>Manfaat per tahun</SectionTitle>
-      <div className="benefit-grid">
-        <div className="benefit-card">
-          <span className="benefit-icon benefit-icon-money" aria-hidden="true">
-            <Banknote size={17} />
-          </span>
-          <span className="benefit-label">Nilai listrik</span>
-          <strong>{formatRupiah(solar.annualValueRp)}</strong>
-          <span className="benefit-note">
-            Tarif PLN Rp{formatNumber(assumptions.tariffRpPerKwh, 2)}/kWh. Nilai energinya, bukan jaminan
-            hemat tagihan.
-          </span>
+      <SectionTitle>Manfaat per tahun</SectionTitle>
+      <dl className="benefit-list">
+        <div>
+          <dt>Nilai listrik</dt>
+          <dd>{formatRupiah(solar.annualValueRp)}</dd>
+          <p>
+            Tarif PLN Rp{formatNumber(assumptions.tariffRpPerKwh, 2)}/kWh. Nilai energinya, bukan jaminan hemat
+            tagihan.
+          </p>
         </div>
-        <div className="benefit-card">
-          <span className="benefit-icon benefit-icon-co2" aria-hidden="true">
-            <Leaf size={17} />
-          </span>
-          <span className="benefit-label">CO₂ dihindari</span>
-          <strong>{formatNumber(solar.annualCo2Kg / 1000, 1)} ton</strong>
-          <span className="benefit-note">
-            Dibanding listrik jaringan Jawa-Bali ({formatNumber(assumptions.gridEmissionKgPerKwh, 2)} kg
-            CO₂/kWh).
-          </span>
+        <div>
+          <dt>CO₂ dihindari</dt>
+          <dd>{formatNumber(solar.annualCo2Kg / 1000, 1)} ton</dd>
+          <p>
+            Dibanding listrik jaringan Jawa-Bali ({formatNumber(assumptions.gridEmissionKgPerKwh, 2)} kg CO₂/kWh).
+          </p>
         </div>
-      </div>
+      </dl>
     </section>
   );
 }
@@ -266,7 +202,7 @@ function BuildingDetails({ building, solar }) {
   return (
     <details className="sidebar-details">
       <summary>
-        <Building2 size={15} /> Detail bangunan
+        Detail bangunan
         <ChevronDown size={16} className="details-chevron" />
       </summary>
       <dl>
@@ -285,7 +221,7 @@ function BuildingDetails({ building, solar }) {
         </dd>
       </dl>
       <a className="details-link" href={mapsUrl} target="_blank" rel="noreferrer">
-        <MapPin size={14} /> Buka lokasi di Google Maps <ExternalLink size={13} />
+        Buka lokasi di Google Maps <ExternalLink size={13} />
       </a>
     </details>
   );
@@ -295,7 +231,7 @@ function Method({ assumptions }) {
   return (
     <details className="sidebar-details">
       <summary>
-        <Calculator size={15} /> Cara menghitung
+        Cara menghitung
         <ChevronDown size={16} className="details-chevron" />
       </summary>
       <ol className="method-list">
@@ -327,36 +263,25 @@ function BuildingInfo({ detail }) {
   return (
     <>
       {solar.suitable ? (
-        <div className="hero hero-suitable">
-          <span className="hero-label">
-            <Zap size={14} /> Perkiraan listrik per tahun
-          </span>
+        <div className="hero">
+          <span className="hero-label">Perkiraan listrik per tahun</span>
           <span className="hero-value">
             {formatNumber(solar.annualKwh)} <small>kWh</small>
           </span>
           <span className="hero-sub">
-            ≈ {formatNumber(solar.annualKwh / 12)} kWh per bulan · {formatNumber(solar.annualKwh / 365, 1)} kWh
-            per hari
+            {formatNumber(solar.panelCount)} panel · {formatNumber(solar.capacityKwp, 1)} kWp ·{" "}
+            {formatNumber(solar.footprintM2)} m² atap
           </span>
-          <div className="hero-chips">
-            <span>
-              <SolarPanel size={14} /> {formatNumber(solar.panelCount)} panel
-            </span>
-            <span>
-              <Zap size={14} /> {formatNumber(solar.capacityKwp, 1)} kWp
-            </span>
-            <span>
-              <Ruler size={14} /> {formatNumber(solar.footprintM2)} m²
-            </span>
-          </div>
+          <span className="hero-sub">
+            Sekitar {formatNumber(solar.annualKwh / 12)} kWh per bulan, {formatNumber(solar.annualKwh / 365, 1)} kWh
+            per hari.
+          </span>
         </div>
       ) : (
         <div className="hero hero-unsuitable">
-          <span className="hero-label">
-            <TriangleAlert size={14} /> Perkiraan listrik per tahun
-          </span>
+          <span className="hero-label">Perkiraan listrik per tahun</span>
           <span className="hero-value">Atap terlalu kecil</span>
-          <p className="hero-summary">
+          <p className="hero-sub">
             Setelah dikurangi jarak dari tepi, hanya {formatNumber(solar.usableM2, 1)} m² yang bisa dipakai.
             Itu tidak cukup untuk {assumptions.minPanels} panel surya.
           </p>
@@ -377,22 +302,15 @@ function BuildingInfo({ detail }) {
 
 export default function Sidebar({ selection, collapsed, onToggleCollapsed, onClose, onExplore }) {
   const selected = selection.status !== "idle";
-  const kicker = selected
-    ? selection.status === "ready"
-      ? regionName(selection.detail.building.region)
-      : "Bogor"
-    : "Panduan peta";
+  const kicker = selected && selection.status === "ready" ? regionName(selection.detail.building.region) : null;
   const title = selected ? "Atap terpilih" : "Potensi listrik surya atap";
 
   return (
     <aside className={`sidebar${collapsed ? " sidebar-collapsed" : ""}`} aria-label="Informasi atap">
       <div className="sidebar-head">
-        <span className={`sidebar-head-icon${selected ? " is-selected" : ""}`} aria-hidden="true">
-          {selected ? <Building2 size={19} /> : <Sun size={19} />}
-        </span>
         <div className="sidebar-head-text">
-          <p className="sidebar-kicker">{kicker}</p>
           <h2>{title}</h2>
+          {kicker && <p className="sidebar-kicker">{kicker}</p>}
         </div>
         <div className="sidebar-actions">
           <button
@@ -417,13 +335,11 @@ export default function Sidebar({ selection, collapsed, onToggleCollapsed, onClo
           {!selected && <Intro onExplore={onExplore} />}
           {selection.status === "loading" && (
             <div className="sidebar-loading">
-              <LoaderCircle size={18} className="spin" /> Menghitung potensi surya…
+              <LoaderCircle size={16} className="spin" /> Menghitung potensi surya…
             </div>
           )}
           {selection.status === "error" && (
-            <p className="sidebar-error">
-              <TriangleAlert size={16} /> Data atap tidak dapat dimuat: {selection.message}
-            </p>
+            <p className="sidebar-error">Data atap tidak dapat dimuat: {selection.message}</p>
           )}
           {selection.status === "ready" && <BuildingInfo detail={selection.detail} />}
         </div>

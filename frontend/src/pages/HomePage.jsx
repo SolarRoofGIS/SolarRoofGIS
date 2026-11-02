@@ -1,71 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  ArrowRight,
-  Banknote,
-  BookOpen,
-  Building2,
-  CalendarDays,
-  Grid3x3,
-  Leaf,
-  Map as MapIcon,
-  MousePointerClick,
-  Ruler,
-  SolarPanel,
-  Sun,
-  Zap,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { fetchBuildingDetail, fetchJson } from "../api";
 import { formatNumber } from "../format";
 import SiteFooter from "../layout/SiteFooter";
+import { NO_DATA_COLOR, PVOUT_RAMP } from "../map/colors";
 import "./Pages.css";
 
-// A 220 m² roof near Kebun Raya Bogor, shown as a live example on the home page.
-export const EXAMPLE_BUILDING_ID = 487204;
+// A 690 m² roof just north of Kebun Raya Bogor, shown as a live example on the home page.
+export const EXAMPLE_BUILDING_ID = 2332211;
 
 const STEPS = [
   {
-    icon: Building2,
     title: "Bentuk atap",
     text: "2,67 juta poligon bangunan dari citra satelit (Google Open Buildings) memberi luas setiap atap.",
   },
   {
-    icon: Sun,
     title: "Sinar matahari",
     text: "Global Solar Atlas memberi PVOUT: listrik yang dihasilkan 1 kWp panel per tahun di lokasi itu.",
   },
   {
-    icon: SolarPanel,
     title: "Panel yang muat",
     text: "Atap dikurangi jarak tepi dan area terhalang, lalu dihitung berapa panel 550 Wp yang muat.",
   },
   {
-    icon: Zap,
-    title: "Listrik & manfaat",
-    text: "Kapasitas × PVOUT menjadi kWh per tahun dan per bulan, lengkap dengan nilai rupiah dan CO₂.",
-  },
-];
-
-const FEATURES = [
-  {
-    icon: Grid3x3,
-    title: "Jelajahi per kawasan",
-    text: "Lihat kawasan mana yang menyimpan potensi listrik atap terbesar sebelum memperbesar ke atap.",
-  },
-  {
-    icon: MousePointerClick,
-    title: "Klik satu atap",
-    text: "Setiap bangunan bisa diklik untuk melihat jumlah panel, kapasitas, dan produksi listriknya.",
-  },
-  {
-    icon: CalendarDays,
-    title: "Produksi per bulan",
-    text: "Grafik bulanan memperlihatkan pengaruh musim hujan terhadap listrik yang dihasilkan.",
-  },
-  {
-    icon: Banknote,
-    title: "Nilai dan emisi",
-    text: "Perkiraan nilai listrik dengan tarif PLN dan emisi CO₂ yang bisa dihindari setiap tahun.",
+    title: "Listrik dan manfaat",
+    text: "Kapasitas × PVOUT menjadi kWh per tahun dan per bulan, dengan nilai rupiah dan CO₂ yang dihindari.",
   },
 ];
 
@@ -73,16 +33,42 @@ function formatMillions(value) {
   return `${formatNumber(value / 1e6, 2)} juta`;
 }
 
-function StatCard({ icon: Icon, value, label, note }) {
+function pvoutColor(solar) {
+  const range = solar.pvoutRange;
+  if (solar.pvout === null || !range) return NO_DATA_COLOR;
+  const share = Math.min(Math.max((solar.pvout - range.min) / (range.max - range.min), 0), 1);
+  return PVOUT_RAMP[Math.round(share * (PVOUT_RAMP.length - 1))];
+}
+
+// The roof outline in local metres, scaled into the drawing, with a 10 m scale bar.
+function RoofOutline({ geometry, color }) {
+  const size = { width: 280, height: 200, margin: 18 };
+  const rings = geometry.type === "Polygon" ? geometry.coordinates : geometry.coordinates.flat();
+  const lat0 = rings[0][0][1];
+  const metresPerLon = 111320 * Math.cos((lat0 * Math.PI) / 180);
+  const points = rings.map((ring) => ring.map(([lon, lat]) => [lon * metresPerLon, -lat * 110574]));
+  const xs = points.flat().map(([x]) => x);
+  const ys = points.flat().map(([, y]) => y);
+  const [minX, minY] = [Math.min(...xs), Math.min(...ys)];
+  const scale = Math.min(
+    (size.width - size.margin * 2) / (Math.max(...xs) - minX),
+    (size.height - size.margin * 2 - 16) / (Math.max(...ys) - minY),
+  );
+  const path = points
+    .map((ring) => `M${ring.map(([x, y]) => `${((x - minX) * scale + size.margin).toFixed(1)},${((y - minY) * scale + size.margin).toFixed(1)}`).join("L")}Z`)
+    .join(" ");
+  const bar = 10 * scale;
+
   return (
-    <div className="stat-card">
-      <span className="stat-icon" aria-hidden="true">
-        <Icon size={20} />
-      </span>
-      <strong className={value ? "" : "skeleton"}>{value || "000"}</strong>
-      <span className="stat-label">{label}</span>
-      {note && <span className="stat-note">{note}</span>}
-    </div>
+    <svg className="roof-outline" viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label="Bentuk atap contoh">
+      <path d={path} fill={color} fillRule="evenodd" stroke="#1c2421" strokeWidth="1.2" />
+      <g transform={`translate(${size.margin} ${size.height - 12})`}>
+        <path d={`M0,-4V0H${bar}V-4`} fill="none" stroke="#545d59" />
+        <text x={bar + 6} y="0" fontSize="11" fill="#545d59">
+          10 m
+        </text>
+      </g>
+    </svg>
   );
 }
 
@@ -100,48 +86,40 @@ function ExampleRoof() {
   }, []);
 
   const solar = detail?.solar;
-  // A panel grid that fills about as much of the drawn roof as the estimate does.
-  const cells = 40;
-  const filled = solar ? Math.round(Math.min(solar.usableShare, 1) * cells) : 0;
+  const rows = [
+    ["Luas atap", solar && `${formatNumber(solar.footprintM2)} m²`],
+    ["Bisa dipasangi panel", solar && `${formatNumber(solar.usableM2)} m²`],
+    ["Panel 550 Wp", solar && formatNumber(solar.panelCount)],
+    ["Kapasitas", solar && `${formatNumber(solar.capacityKwp, 1)} kWp`],
+    ["PVOUT di lokasi", solar && `${formatNumber(solar.pvout)} kWh/kWp`],
+  ];
 
   return (
-    <Link to={`/peta?atap=${EXAMPLE_BUILDING_ID}`} className="example-card" aria-label="Buka contoh atap di peta">
-      <div className="example-head">
-        <span className="example-tag">
-          <Sun size={13} /> Contoh nyata
-        </span>
-        <span className="example-place">Dekat Kebun Raya, Kota Bogor</span>
+    <figure className="example">
+      <div className="example-drawing">
+        {detail && <RoofOutline geometry={detail.building.geometry} color={pvoutColor(solar)} />}
       </div>
-      <div className="example-roof" aria-hidden="true">
-        {Array.from({ length: cells }, (_, index) => (
-          <span key={index} className={index < filled ? "is-panel" : ""} />
-        ))}
-      </div>
-      <div className="example-stats">
-        <div>
-          <Ruler size={15} />
-          <strong>{solar ? `${formatNumber(solar.footprintM2)} m²` : "…"}</strong>
-          <span>luas atap</span>
-        </div>
-        <div>
-          <SolarPanel size={15} />
-          <strong>{solar ? formatNumber(solar.panelCount) : "…"}</strong>
-          <span>panel surya</span>
-        </div>
-        <div>
-          <Zap size={15} />
-          <strong>{solar ? `${formatNumber(solar.capacityKwp, 1)} kWp` : "…"}</strong>
-          <span>kapasitas</span>
-        </div>
-      </div>
-      <div className="example-result">
-        <span>Perkiraan listrik per tahun</span>
-        <strong>{solar ? `${formatNumber(solar.annualKwh)} kWh` : "…"}</strong>
-      </div>
-      <span className="example-open">
-        Lihat di peta <ArrowRight size={15} />
-      </span>
-    </Link>
+      <table className="example-table">
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label}>
+              <th scope="row">{label}</th>
+              <td>{value || "…"}</td>
+            </tr>
+          ))}
+          <tr className="example-total">
+            <th scope="row">Listrik per tahun</th>
+            <td>{solar ? `${formatNumber(solar.annualKwh)} kWh` : "…"}</td>
+          </tr>
+        </tbody>
+      </table>
+      <figcaption>
+        Contoh: satu bangunan di utara Kebun Raya, Kota Bogor.{" "}
+        <Link to={`/peta?atap=${EXAMPLE_BUILDING_ID}`} className="text-link">
+          Lihat di peta
+        </Link>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -157,153 +135,90 @@ export default function HomePage() {
   }, []);
 
   const total = stats?.total;
+  const figures = [
+    ["Bangunan dipetakan", total && formatMillions(total.buildings)],
+    ["Total luas atap", total && `${formatNumber(total.roofAreaM2 / 1e6)} km²`],
+    ["Kapasitas panel teknis", total && `${formatNumber(total.capacityKwp / 1e6, 1)} GWp`],
+    ["Listrik per tahun", total && `${formatNumber(total.annualGwh / 1000, 1)} TWh`],
+  ];
 
   return (
     <div className="page">
-      <section className="home-hero">
-        <div className="hero-glow" aria-hidden="true" />
-        <div className="page-inner home-hero-inner">
-          <div className="home-hero-copy">
-            <span className="eyebrow">
-              <Sun size={14} /> Peta potensi listrik surya atap
-            </span>
-            <h1>
-              Berapa listrik yang bisa dihasilkan <em>atap di Bogor?</em>
-            </h1>
-            <p>
-              SolarRoofGIS memetakan setiap atap bangunan di Kota dan Kabupaten Bogor, lalu memperkirakan
-              berapa panel surya yang muat dan berapa listrik yang dihasilkan sepanjang tahun.
-            </p>
-            <div className="hero-actions">
-              <Link to="/peta" className="button button-primary">
-                <MapIcon size={18} /> Buka peta
-              </Link>
-              <Link to="/tentang" className="button button-ghost">
-                <BookOpen size={18} /> Metode & data
-              </Link>
-            </div>
+      <section className="page-inner home-intro">
+        <div className="home-intro-text">
+          <p className="overline">Kota dan Kabupaten Bogor</p>
+          <h1>Berapa listrik yang bisa dihasilkan atap di Bogor?</h1>
+          <p className="lead">
+            SolarRoofGIS memetakan setiap atap bangunan di Kota dan Kabupaten Bogor, lalu memperkirakan berapa
+            panel surya yang muat dan berapa listrik yang dihasilkan sepanjang tahun.
+          </p>
+          <div className="actions">
+            <Link to="/peta" className="button button-primary">
+              Buka peta <ArrowRight size={17} />
+            </Link>
+            <Link to="/tentang" className="text-link">
+              Metode dan data
+            </Link>
           </div>
-          <ExampleRoof />
         </div>
+        <ExampleRoof />
       </section>
 
-      <section className="page-inner stats-section" aria-label="Ringkasan data">
-        <div className="stats-grid">
-          <StatCard
-            icon={Building2}
-            value={total && formatMillions(total.buildings)}
-            label="bangunan dipetakan"
-          />
-          <StatCard
-            icon={Ruler}
-            value={total && `${formatNumber(total.roofAreaM2 / 1e6)} km²`}
-            label="total luas atap"
-          />
-          <StatCard
-            icon={SolarPanel}
-            value={total && `${formatNumber(total.capacityKwp / 1e6, 1)} GWp`}
-            label="kapasitas panel teknis"
-            note={total && `${formatNumber((total.suitableBuildings / total.buildings) * 100)}% atap cukup luas`}
-          />
-          <StatCard
-            icon={Zap}
-            value={total && `${formatNumber(total.annualGwh / 1000, 1)} TWh`}
-            label="listrik per tahun"
-            note="Bila semua atap layak dipasangi panel"
-          />
+      <section className="page-inner page-section" aria-labelledby="ringkasan">
+        <h2 id="ringkasan">Potensi teknis seluruh wilayah</h2>
+        <dl className="figures">
+          {figures.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd className={value ? "" : "skeleton"}>{value || "000"}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Wilayah</th>
+                <th scope="col">Bangunan</th>
+                <th scope="col">Luas atap</th>
+                <th scope="col">Atap cukup luas</th>
+                <th scope="col">Listrik per tahun</th>
+                <th scope="col">PVOUT (kWh/kWp)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stats?.regions || []).map((region) => (
+                <tr key={region.name}>
+                  <th scope="row">{region.name}</th>
+                  <td>{formatMillions(region.buildings)}</td>
+                  <td>{formatNumber(region.roofAreaM2 / 1e6, 1)} km²</td>
+                  <td>{formatNumber((region.suitableBuildings / region.buildings) * 100)}%</td>
+                  <td>{formatNumber(region.annualGwh)} GWh</td>
+                  <td>
+                    {formatNumber(region.pvoutMin)}–{formatNumber(region.pvoutMax)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        {stats && (
-          <div className="region-grid">
-            {stats.regions.map((region) => (
-              <div key={region.name} className="region-card">
-                <div className="region-head">
-                  <MapIcon size={16} />
-                  <h3>{region.name}</h3>
-                </div>
-                <dl>
-                  <div>
-                    <dt>Bangunan</dt>
-                    <dd>{formatMillions(region.buildings)}</dd>
-                  </div>
-                  <div>
-                    <dt>Luas atap</dt>
-                    <dd>{formatNumber(region.roofAreaM2 / 1e6, 1)} km²</dd>
-                  </div>
-                  <div>
-                    <dt>Listrik/tahun</dt>
-                    <dd>{formatNumber(region.annualGwh)} GWh</dd>
-                  </div>
-                  <div>
-                    <dt>PVOUT</dt>
-                    <dd>
-                      {formatNumber(region.pvoutMin)}–{formatNumber(region.pvoutMax)}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            ))}
-          </div>
-        )}
-        <p className="stats-footnote">
-          Potensi teknis: perkiraan kasar dengan asumsi yang sama seperti di peta (atap dianggap persegi untuk
-          jarak tepi). Angka per atap di peta memakai bentuk atap sebenarnya.
+        <p className="footnote">
+          Bila semua atap yang cukup luas dipasangi panel. Perkiraan kasar dengan asumsi yang sama seperti di peta
+          (atap dianggap persegi untuk jarak tepi); angka per atap di peta memakai bentuk atap sebenarnya.
         </p>
       </section>
 
-      <section className="page-inner page-section">
-        <div className="section-heading">
-          <span className="eyebrow eyebrow-dark">
-            <Leaf size={14} /> Cara kerja
-          </span>
-          <h2>Dari bentuk atap sampai kWh</h2>
-          <p>Empat langkah yang dijalankan untuk setiap bangunan saat Anda mengkliknya di peta.</p>
-        </div>
-        <ol className="steps-grid">
-          {STEPS.map(({ icon: Icon, title, text }, index) => (
-            <li key={title} className="step-card">
-              <span className="step-number">{index + 1}</span>
-              <span className="step-icon" aria-hidden="true">
-                <Icon size={22} />
-              </span>
+      <section className="page-inner page-section" aria-labelledby="cara-kerja">
+        <h2 id="cara-kerja">Cara kerja</h2>
+        <p className="section-lead">Empat langkah yang dijalankan untuk setiap bangunan saat Anda mengkliknya di peta.</p>
+        <ol className="steps">
+          {STEPS.map(({ title, text }) => (
+            <li key={title}>
               <h3>{title}</h3>
               <p>{text}</p>
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="page-inner page-section">
-        <div className="section-heading">
-          <span className="eyebrow eyebrow-dark">
-            <MapIcon size={14} /> Fitur peta
-          </span>
-          <h2>Yang bisa Anda lihat</h2>
-        </div>
-        <div className="feature-grid">
-          {FEATURES.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="feature-card">
-              <span className="feature-icon" aria-hidden="true">
-                <Icon size={20} />
-              </span>
-              <div>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="page-inner page-section">
-        <div className="cta-band">
-          <div>
-            <h2>Mulai dari atap yang Anda kenal</h2>
-            <p>Rumah, sekolah, kantor, atau masjid di sekitar Anda. Semuanya ada di peta.</p>
-          </div>
-          <Link to="/peta" className="button button-primary">
-            Jelajahi peta <ArrowRight size={18} />
-          </Link>
-        </div>
       </section>
 
       <SiteFooter />

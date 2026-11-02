@@ -1,21 +1,18 @@
 import { Link } from "react-router-dom";
-import { House, Map as MapIcon, SearchX } from "lucide-react";
 import "./Pages.css";
 
 export default function NotFoundPage() {
   return (
-    <main className="page not-found">
-      <span className="not-found-icon" aria-hidden="true">
-        <SearchX size={30} />
-      </span>
+    <main className="page page-inner not-found">
+      <p className="overline">404</p>
       <h1>Halaman tidak ditemukan</h1>
-      <p>Alamat yang Anda buka tidak ada di SolarRoofGIS.</p>
-      <div className="hero-actions">
-        <Link to="/" className="button button-outline">
-          <House size={18} /> Beranda
-        </Link>
+      <p className="lead">Alamat yang Anda buka tidak ada di SolarRoofGIS.</p>
+      <div className="actions">
         <Link to="/peta" className="button button-primary">
-          <MapIcon size={18} /> Buka peta
+          Buka peta
+        </Link>
+        <Link to="/" className="text-link">
+          Kembali ke beranda
         </Link>
       </div>
     </main>

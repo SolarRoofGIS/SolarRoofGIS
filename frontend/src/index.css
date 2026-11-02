@@ -1,24 +1,26 @@
 :root {
-  --ink: #15302b;
-  --ink-soft: #566a63;
-  --ink-faint: #82918c;
-  --forest: #173a35;
-  --forest-deep: #0f2a26;
-  --forest-soft: #e6efeb;
-  --mist: #f1f5f3;
-  --line: #e1e8e4;
+  --ink: #1c2421;
+  --ink-soft: #545d59;
+  --ink-faint: #858c88;
+  /* Dark green for links and buttons; orange is kept for the PVOUT data itself. */
+  --forest: #1f4a3f;
+  --forest-deep: #163830;
+  --forest-soft: #e7eeea;
+  --mist: #f2f1ec;
+  --line: #dcd9cf;
   --surface: #ffffff;
-  --page: #f6f7f3;
+  --page: #f8f7f3;
   --sun: #f6c85f;
-  --sun-soft: #fff4d6;
-  --orange: #ef7a1c;
-  --orange-dark: #b9470b;
-  --shadow-sm: 0 2px 10px rgb(21 48 43 / 10%);
-  --shadow-md: 0 12px 32px rgb(21 48 43 / 16%);
-  --shadow-lg: 0 24px 60px rgb(15 42 38 / 22%);
-  --radius: 16px;
-  --header-height: 60px;
-  --content-width: 1120px;
+  --sun-soft: #fdf3dc;
+  --orange: #e2701b;
+  --orange-dark: #a8440d;
+  --shadow-sm: 0 1px 3px rgb(28 36 33 / 14%);
+  --shadow-md: 0 4px 14px rgb(28 36 33 / 14%);
+  --shadow-lg: 0 6px 20px rgb(28 36 33 / 16%);
+  --radius: 6px;
+  --header-height: 56px;
+  --content-width: 1080px;
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
 
 * {
@@ -36,7 +38,7 @@ body,
 body {
   color: var(--ink);
   background: var(--page);
-  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -49,6 +51,6 @@ button {
 }
 
 :focus-visible {
-  outline: 3px solid rgb(239 122 28 / 55%);
+  outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
