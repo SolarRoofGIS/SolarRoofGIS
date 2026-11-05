@@ -1,0 +1,403 @@
+.page {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.page-inner {
+  width: 100%;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.page h1,
+.page h2 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.page h1 {
+  max-width: 16ch;
+  margin: 0;
+  font-size: clamp(34px, 5vw, 50px);
+  line-height: 1.1;
+}
+
+.page h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.page h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.page p {
+  margin: 0;
+}
+
+.overline {
+  margin-bottom: 14px !important;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.lead {
+  max-width: 58ch;
+  margin-top: 18px !important;
+  color: var(--ink-soft);
+  font-size: 18px;
+}
+
+.section-lead {
+  max-width: 62ch;
+  color: var(--ink-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 24px;
+  margin-top: 28px;
+}
+
+.page-section {
+  padding-top: 44px;
+  padding-bottom: 44px;
+  border-top: 1px solid var(--line);
+}
+
+.footnote {
+  max-width: 80ch;
+  margin-top: 12px !important;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+.skeleton {
+  border-radius: 3px;
+  color: transparent !important;
+  background: var(--mist);
+}
+
+/* Home: question on the left, a worked example on the right. */
+.home-intro {
+  display: grid;
+  align-items: center;
+  gap: 48px;
+  padding-top: 64px;
+  padding-bottom: 64px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+
+.example {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+.example-drawing {
+  aspect-ratio: 7 / 5;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  background-color: var(--page);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.roof-outline {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.example-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.example-table th,
+.example-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--mist);
+}
+
+.example-table th {
+  color: var(--ink-soft);
+  font-weight: 400;
+  text-align: left;
+}
+
+.example-table td {
+  font-weight: 500;
+  text-align: right;
+}
+
+.example-total th,
+.example-total td {
+  padding-top: 10px;
+  border-bottom: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.example figcaption {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+/* Headline figures in a row, separated by rules. */
+.figures {
+  display: grid;
+  margin: 22px 0 28px;
+  border-top: 2px solid var(--ink);
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.figures div {
+  padding: 14px 18px 4px 0;
+}
+
+.figures div + div {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+
+.figures dt {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.figures dd {
+  margin: 4px 0 0;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table caption {
+  padding-bottom: 8px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.data-table th:first-child {
+  text-align: left;
+}
+
+.data-table thead th {
+  border-bottom-color: var(--ink);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.data-table tbody th {
+  font-weight: 600;
+}
+
+.steps {
+  display: grid;
+  gap: 24px;
+  margin: 28px 0 0;
+  padding: 0;
+  counter-reset: step;
+  grid-template-columns: repeat(4, 1fr);
+  list-style: none;
+}
+
+.steps li {
+  padding-top: 12px;
+  border-top: 2px solid var(--ink);
+  counter-increment: step;
+}
+
+.steps h3::before {
+  margin-right: 8px;
+  color: var(--orange-dark);
+  content: counter(step) ".";
+}
+
+.steps p {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 15px;
+}
+
+/* About: a report with the section name in the margin. */
+.doc-header {
+  padding-top: 64px;
+  padding-bottom: 48px;
+}
+
+.doc-header h1 {
+  max-width: none;
+}
+
+.doc-section {
+  display: grid;
+  gap: 8px 48px;
+  padding-top: 36px;
+  padding-bottom: 36px;
+  border-top: 1px solid var(--line);
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.doc-section h2 {
+  font-size: 24px;
+}
+
+.doc-body {
+  display: grid;
+  max-width: 68ch;
+  gap: 18px;
+}
+
+.term-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+.term-list dt {
+  font-weight: 600;
+}
+
+.term-detail {
+  margin-left: 10px;
+  color: var(--ink-faint);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.term-list dd {
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+}
+
+.method-steps {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.method-steps li::marker {
+  color: var(--orange-dark);
+  font-weight: 600;
+}
+
+.method-steps p {
+  margin-top: 2px;
+  color: var(--ink-soft);
+}
+
+.formula {
+  margin-top: 10px !important;
+  padding: 10px 14px;
+  border-left: 3px solid var(--orange);
+  color: var(--ink) !important;
+  background: var(--mist);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 14px;
+}
+
+.assumption-table td {
+  font-weight: 500;
+}
+
+.assumption-table tbody th {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.plain-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink-soft);
+}
+
+.not-found {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+
+@media (max-width: 900px) {
+  .home-intro {
+    gap: 36px;
+    padding-top: 40px;
+    padding-bottom: 44px;
+    grid-template-columns: 1fr;
+  }
+
+  .figures,
+  .steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .figures div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .doc-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .page h2 {
+    font-size: 24px;
+  }
+
+  .lead {
+    font-size: 17px;
+  }
+
+  .figures dd {
+    font-size: 24px;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,27 +1,36 @@
-import Map from "./map/Map";
+import { useEffect } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
+import SiteHeader from "./layout/SiteHeader";
+import AboutPage from "./pages/AboutPage";
+import HomePage from "./pages/HomePage";
+import MapPage from "./pages/MapPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import "./App.css";
 
+const TITLES = {
+  "/": "SolarRoofGIS · Potensi listrik surya atap Bogor",
+  "/peta": "Peta · SolarRoofGIS",
+  "/tentang": "Tentang · SolarRoofGIS",
+};
+
 export default function App() {
+  const { pathname } = useLocation();
+  const isMap = pathname === "/peta";
+
+  useEffect(() => {
+    document.title = TITLES[pathname] || "SolarRoofGIS";
+    if (!isMap) window.scrollTo(0, 0);
+  }, [pathname, isMap]);
+
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div className="brand-mark" aria-hidden="true">☀</div>
-        <div>
-          <p className="brand-name">SolarRoofGIS</p>
-          <p className="brand-location">Kota Bogor · Kabupaten Bogor</p>
-        </div>
-        <div className="header-tag">Rooftop solar mapping</div>
-      </header>
-      <main className="map-frame">
-        <Map />
-        <div className="map-title">
-          <h1>Bogor study area</h1>
-          <p>OpenStreetMap basemap</p>
-        </div>
-      </main>
-      <footer className="app-footer">
-        Google building footprints are loaded from PostGIS when you zoom in.
-      </footer>
+    <div className={`app-shell${isMap ? " app-shell-map" : ""}`}>
+      <SiteHeader />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/peta" element={<MapPage />} />
+        <Route path="/tentang" element={<AboutPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </div>
   );
 }

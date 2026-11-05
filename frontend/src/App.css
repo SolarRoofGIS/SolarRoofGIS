@@ -1,124 +1,180 @@
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  min-height: 100%;
   flex-direction: column;
-  background: #eef2ef;
 }
 
-.app-header {
-  z-index: 500;
+/* The map page fills the window; the other pages scroll. */
+.app-shell-map {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.site-header {
+  position: sticky;
+  z-index: 50;
+  top: 0;
   display: flex;
-  min-height: 68px;
+  height: var(--header-height);
+  flex: none;
   align-items: center;
-  gap: 12px;
-  padding: 10px 22px;
-  color: #f4f7f5;
-  background: #173a35;
-  box-shadow: 0 2px 10px rgb(17 42 37 / 18%);
+  gap: 24px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
 }
 
 .brand-mark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 12px;
-  color: #173a35;
-  background: #f6c85f;
-  font-size: 24px;
-}
-
-.brand-name,
-.brand-location {
-  margin: 0;
+  flex: none;
 }
 
 .brand-name {
   font-size: 16px;
-  font-weight: 750;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .brand-location {
-  margin-top: 3px;
-  color: #c8d8d3;
-  font-size: 12px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 13px;
 }
 
-.header-tag {
+.site-nav {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+  gap: 22px;
   margin-left: auto;
-  padding: 7px 11px;
-  border: 1px solid rgb(231 242 237 / 25%);
-  border-radius: 999px;
-  color: #d7e5e0;
-  font-size: 12px;
 }
 
-.map-frame {
-  position: relative;
-  min-height: 0;
-  flex: 1;
+.site-nav a {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
 }
 
-.map-title {
-  position: absolute;
-  z-index: 400;
-  top: 16px;
-  left: 16px;
-  padding: 13px 16px;
-  border: 1px solid rgb(23 58 53 / 10%);
-  border-radius: 10px;
-  background: rgb(255 255 255 / 95%);
-  box-shadow: 0 3px 12px rgb(24 43 38 / 14%);
-  pointer-events: none;
+.site-nav a:hover {
+  color: var(--ink);
 }
 
-.map-title h1 {
+.site-nav a.active {
+  border-bottom-color: var(--orange);
+  color: var(--ink);
+}
+
+.site-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.site-footer-inner {
+  display: flex;
+  max-width: var(--content-width);
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px 32px;
+  margin: 0 auto;
+  padding: 28px 20px 36px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.site-footer p {
+  max-width: 520px;
   margin: 0;
-  color: #1d3530;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
+
+.footer-links a {
+  color: var(--ink);
+}
+
+.footer-links a:hover {
+  color: var(--forest);
+}
+
+/* Buttons shared by the pages and the map panel. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font: inherit;
   font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
 }
 
-.map-title p {
-  margin: 4px 0 0;
-  color: #64736e;
-  font-size: 12px;
+.button-primary {
+  color: #fff;
+  background: var(--forest);
 }
 
-.building-status {
-  position: absolute;
-  z-index: 400;
-  bottom: 16px;
-  left: 16px;
-  max-width: min(440px, calc(100% - 32px));
-  padding: 9px 12px;
-  border: 1px solid rgb(23 58 53 / 12%);
-  border-radius: 8px;
-  color: #29433b;
-  background: rgb(255 255 255 / 95%);
-  box-shadow: 0 2px 8px rgb(24 43 38 / 14%);
-  font-size: 12px;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  pointer-events: none;
+.button-primary:hover {
+  background: var(--forest-deep);
 }
 
-.app-footer {
-  padding: 7px 15px;
-  color: #52635d;
-  background: #f8faf8;
-  font-size: 11px;
-  text-align: right;
+.button-outline {
+  border-color: #bfc2b8;
+  color: var(--ink);
+  background: var(--surface);
 }
 
-@media (max-width: 540px) {
-  .app-header {
-    padding-inline: 14px;
+.button-outline:hover {
+  border-color: var(--ink-soft);
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--forest);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.text-link:hover {
+  color: var(--forest-deep);
+}
+
+@media (max-width: 720px) {
+  .site-header {
+    gap: 12px;
+    padding: 0 14px;
   }
 
-  .header-tag {
-    max-width: 118px;
-    font-size: 10px;
-    text-align: center;
+  .brand-location {
+    display: none;
+  }
+
+  .site-nav {
+    gap: 16px;
   }
 }
