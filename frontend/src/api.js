@@ -21,3 +21,13 @@ export function fetchBuildingDetail(id) {
   }
   return detailCache[id];
 }
+
+// The same estimate as a building's, for a roof outline drawn on the map (GeoJSON geometry).
+export function fetchRoofEstimate(geometry, options) {
+  return fetchJson("/api/roofs/estimate", {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ geometry }),
+  });
+}

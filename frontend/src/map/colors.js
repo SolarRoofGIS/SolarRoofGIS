@@ -23,3 +23,9 @@ export function pvoutRgb(value, range) {
   const [from, to] = [channels(PVOUT_RAMP[index]), channels(PVOUT_RAMP[index + 1])];
   return from.map((channel, i) => Math.round(channel + (to[i] - channel) * (position - index)));
 }
+
+// The same ramp as a CSS color, for a roof drawn outside the map.
+export function pvoutCss(value, range) {
+  if (value === null || value === undefined || !range) return NO_DATA_COLOR;
+  return `rgb(${pvoutRgb(value, range).join(", ")})`;
+}

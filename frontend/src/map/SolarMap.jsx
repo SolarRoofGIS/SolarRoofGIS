@@ -10,19 +10,24 @@ import {
 } from "maplibre-gl";
 import {
   Building2,
+  Check,
   EyeOff,
   Layers,
   LoaderCircle,
   Map as MapIcon,
   MonitorX,
   Mountain,
+  PenLine,
   Satellite,
   Sun,
+  Undo2,
+  X,
   ZoomIn,
 } from "lucide-react";
 import { API_BASE_URL, fetchJson } from "../api";
 import { formatNumber } from "../format";
 import { PVOUT_RAMP, pvoutColorExpression } from "./colors";
+import { RoofEditor } from "./roofDrawing";
 import { EMPTY_IMAGE, buildSolarOverlay } from "./solarOverlay";
 import "./SolarMap.css";
 
@@ -37,6 +42,11 @@ const STUDY_BOUNDS = [
 ];
 // Roof tiles exist from zoom 15; below that the map shows the PVOUT overlay.
 export const ROOF_ZOOM = 15;
+// Below this a roof is a few pixels wide; "Gambar atap" first zooms in to DRAW_START_ZOOM.
+const DRAW_MIN_ZOOM = 16;
+const DRAW_START_ZOOM = 17.5;
+// Roofs the viewer drew or reshaped, kept apart from the PVOUT colors of the data.
+const DRAWN_COLOR = "#1f4a3f";
 
 const BASEMAPS = [
   { id: "gray", label: "Abu-abu", icon: MapIcon },
@@ -126,6 +136,9 @@ function mapStyle() {
       },
       boundary: { type: "geojson", data: `${API_BASE_URL}/api/boundaries` },
       selected: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+      // The roof outline the viewer drew, and the outline being drawn or reshaped right now.
+      custom: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
+      draft: { type: "geojson", data: { type: "FeatureCollection", features: [] } },
     },
     layers: [
       { id: "background", type: "background", paint: { "background-color": "#e4ebe8" } },
@@ -230,6 +243,75 @@ function mapStyle() {
         source: "selected",
         paint: { "line-color": "#10302b", "line-width": 3 },
       },
+      {
+        id: "custom-fill",
+        type: "fill",
+        source: "custom",
+        paint: { "fill-color": DRAWN_COLOR, "fill-opacity": ["case", ["get", "selected"], 0.28, 0.16] },
+      },
+      {
+        id: "custom-glow",
+        type: "line",
+        source: "custom",
+        paint: { "line-color": "#ffffff", "line-width": ["case", ["get", "selected"], 6, 4], "line-opacity": 0.85 },
+      },
+      {
+        id: "custom-line",
+        type: "line",
+        source: "custom",
+        paint: { "line-color": DRAWN_COLOR, "line-width": ["case", ["get", "selected"], 2.6, 1.8], "line-dasharray": [2, 1] },
+      },
+      {
+        id: "draft-fill",
+        type: "fill",
+        source: "draft",
+        filter: ["==", ["geometry-type"], "Polygon"],
+        paint: { "fill-color": DRAWN_COLOR, "fill-opacity": 0.2 },
+      },
+      {
+        id: "draft-line",
+        type: "line",
+        source: "draft",
+        filter: ["!=", ["geometry-type"], "Point"],
+        paint: { "line-color": DRAWN_COLOR, "line-width": 2.2 },
+      },
+      {
+        id: "draft-midpoint",
+        type: "circle",
+        source: "draft",
+        filter: ["==", ["get", "kind"], "mid"],
+        paint: {
+          "circle-radius": 3.5,
+          "circle-color": "#ffffff",
+          "circle-opacity": 0.85,
+          "circle-stroke-color": DRAWN_COLOR,
+          "circle-stroke-width": 1,
+        },
+      },
+      {
+        id: "draft-vertex",
+        type: "circle",
+        source: "draft",
+        filter: ["==", ["get", "kind"], "vertex"],
+        paint: {
+          "circle-radius": ["case", ["boolean", ["get", "first"], false], 7, 5],
+          "circle-color": ["case", ["boolean", ["get", "first"], false], "#f9a72b", "#ffffff"],
+          "circle-stroke-color": DRAWN_COLOR,
+          "circle-stroke-width": 2,
+        },
+      },
+      {
+        id: "draft-snap",
+        type: "circle",
+        source: "draft",
+        filter: ["==", ["get", "kind"], "snap"],
+        paint: {
+          "circle-radius": 8,
+          "circle-color": "rgba(0, 0, 0, 0)",
+          "circle-stroke-color": "#cf4f0c",
+          "circle-stroke-width": 2,
+        },
+      },
     ],
   };
 }
@@ -302,8 +384,9 @@ function cellTooltip(properties) {
   </div>`;
 }
 
-// Hover outline plus a tooltip for one interactive layer.
-function bindHover(map, popup, layerId, source, sourceLayer, render) {
+// Hover outline plus a tooltip for one interactive layer, unless blocked(event) says the
+// pointer belongs to something else (the drawing tool, or a drawn roof on top).
+function bindHover(map, popup, layerId, source, sourceLayer, render, blocked) {
   let hovered = null;
   const clear = () => {
     if (hovered !== null) map.setFeatureState({ source, sourceLayer, id: hovered }, { hover: false });
@@ -312,6 +395,11 @@ function bindHover(map, popup, layerId, source, sourceLayer, render) {
 
   map.on("mousemove", layerId, (event) => {
     const feature = event.features[0];
+    if (blocked(event)) {
+      clear();
+      popup.remove();
+      return;
+    }
     if (!feature) return;
     map.getCanvas().style.cursor = "pointer";
     if (feature.id !== hovered) {
@@ -323,7 +411,7 @@ function bindHover(map, popup, layerId, source, sourceLayer, render) {
     popup.setLngLat(event.lngLat).addTo(map);
   });
   map.on("mouseleave", layerId, () => {
-    map.getCanvas().style.cursor = "";
+    if (!blocked()) map.getCanvas().style.cursor = "";
     clear();
     popup.remove();
   });
@@ -442,12 +530,116 @@ function Legend({ zoom, pvoutRange }) {
   );
 }
 
-export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect, padding }) {
+// Buttons for the roof drawing tool, beside the Lapisan menu.
+function DrawControls({ tool, draft, onStart, onUndo, onCancel, onFinish, onDone }) {
+  if (tool === "draw") {
+    return (
+      <div className="draw-controls">
+        <button
+          type="button"
+          className="map-control-button map-control-icon"
+          onClick={onUndo}
+          disabled={draft.vertices === 0}
+          title="Hapus titik terakhir (Backspace)"
+          aria-label="Hapus titik terakhir"
+        >
+          <Undo2 size={17} />
+        </button>
+        <button type="button" className="map-control-button" onClick={onCancel} title="Batal (Esc)">
+          <X size={17} /> Batal
+        </button>
+        <button
+          type="button"
+          className="map-control-button map-control-primary"
+          onClick={onFinish}
+          disabled={draft.vertices < 3}
+          title="Selesai (Enter)"
+        >
+          <Check size={17} /> Selesai
+        </button>
+      </div>
+    );
+  }
+  if (tool === "edit") {
+    return (
+      <div className="draw-controls">
+        <button type="button" className="map-control-button map-control-primary" onClick={onDone} title="Selesai (Enter)">
+          <Check size={17} /> Selesai mengubah
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="draw-controls">
+      <button type="button" className="map-control-button" onClick={onStart} title="Gambar bentuk atap sendiri">
+        <PenLine size={17} />
+        <span className="map-settings-label">Gambar atap</span>
+      </button>
+    </div>
+  );
+}
+
+function DrawStatus({ tool, draft, replacesOldest }) {
+  const area = draft.areaM2 >= 1 ? ` · ${formatNumber(draft.areaM2)} m²` : "";
+  if (tool === "draw") {
+    return (
+      <span className="map-chip">
+        <PenLine size={15} />
+        {draft.vertices < 3
+          ? "Klik setiap sudut atap. Titik menempel ke sudut atau tepi bangunan."
+          : "Klik titik pertama atau Selesai untuk menutup bentuk."}
+        {area}
+        {replacesOldest && " · Atap gambar terlama akan diganti."}
+      </span>
+    );
+  }
+  return (
+    <span className="map-chip">
+      <PenLine size={15} /> Geser titik sudut. Klik titik kecil untuk menambah, klik kanan untuk menghapus.{area}
+    </span>
+  );
+}
+
+export default function SolarMap({
+  pvoutRange,
+  selectedGeometry,
+  focus,
+  onSelect,
+  padding,
+  tool = "off",
+  customRoofs = [],
+  selectedCustomId = null,
+  drawReplacesOldest = false,
+  onToolStart,
+  onDrawFinish,
+  onDrawCancel,
+  onEditChange,
+  onEditDone,
+  onSelectCustom,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const editorRef = useRef(null);
   const fittedRef = useRef(false);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onSelectCustomRef = useRef(onSelectCustom);
+  onSelectCustomRef.current = onSelectCustom;
+  const toolRef = useRef(tool);
+  toolRef.current = tool;
+  const customGeometry = customRoofs.find((roof) => roof.id === selectedCustomId)?.geometry || null;
+  const customGeometryRef = useRef(customGeometry);
+  customGeometryRef.current = customGeometry;
+  const [draft, setDraft] = useState({ vertices: 0, areaM2: 0 });
+  // The editor calls back into whatever props are current, not the ones it started with.
+  const editorCallbacksRef = useRef(null);
+  editorCallbacksRef.current = {
+    onFinish: onDrawFinish,
+    onCancel: onDrawCancel,
+    onChange: onEditChange,
+    onDone: onEditDone,
+    onDraft: setDraft,
+  };
   const [ready, setReady] = useState(false);
   const [zoom, setZoom] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -470,17 +662,33 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
     map.addControl(new ScaleControl({ unit: "metric" }), "bottom-left");
     map.addControl(new AttributionControl({ compact: true }), "bottom-right");
 
+    editorRef.current = new RoofEditor(map, () => editorCallbacksRef.current);
+
+    // While drawing, clicks belong to the tool; a drawn roof sits on top of the data roofs.
+    const overCustom = (event) => map.queryRenderedFeatures(event.point, { layers: ["custom-fill"] }).length > 0;
+    const blocked = (event) => toolRef.current !== "off" || (event !== undefined && overCustom(event));
     const popup = new Popup({ closeButton: false, closeOnClick: false, offset: 12, className: "solar-popup" });
-    bindHover(map, popup, "buildings-fill", "buildings", "buildings", buildingTooltip);
-    bindHover(map, popup, "overview-fill", "overview", "cells", cellTooltip);
+    bindHover(map, popup, "buildings-fill", "buildings", "buildings", buildingTooltip, blocked);
+    bindHover(map, popup, "overview-fill", "overview", "cells", cellTooltip, blocked);
 
     map.on("click", "buildings-fill", (event) => {
+      if (blocked(event)) return;
       const id = event.features[0]?.properties.id;
       if (id !== undefined) onSelectRef.current(id);
     });
     map.on("click", "overview-fill", (event) => {
-      if (map.getZoom() >= ROOF_ZOOM) return;
+      if (blocked(event) || map.getZoom() >= ROOF_ZOOM) return;
       map.flyTo({ center: event.lngLat, zoom: 16.5, speed: 1.6 });
+    });
+    map.on("click", "custom-fill", (event) => {
+      const id = event.features[0]?.properties.id;
+      if (toolRef.current === "off" && id) onSelectCustomRef.current?.(id);
+    });
+    map.on("mousemove", "custom-fill", () => {
+      if (toolRef.current === "off") map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "custom-fill", () => {
+      if (toolRef.current === "off") map.getCanvas().style.cursor = "";
     });
 
     const updateZoom = () => setZoom(map.getZoom());
@@ -495,6 +703,8 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
     });
 
     return () => {
+      editorRef.current.stop();
+      editorRef.current = null;
       popup.remove();
       map.remove();
       mapRef.current = null;
@@ -568,6 +778,37 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
     );
   }, [ready, selectedGeometry]);
 
+  // The editor reads the outline once when reshaping starts and reports every change back,
+  // so it restarts only when the tool changes, not on its own edits.
+  useEffect(() => {
+    if (!ready) return;
+    const editor = editorRef.current;
+    if (tool === "draw") editor.start("draw");
+    else if (tool === "edit" && customGeometryRef.current) editor.start("edit", customGeometryRef.current);
+    else editor.stop();
+  }, [ready, tool]);
+
+  // The roof being reshaped is shown by the editor instead.
+  useEffect(() => {
+    if (!ready) return;
+    mapRef.current.getSource("custom").setData({
+      type: "FeatureCollection",
+      features: customRoofs
+        .filter((roof) => !(tool === "edit" && roof.id === selectedCustomId))
+        .map((roof) => ({
+          type: "Feature",
+          geometry: roof.geometry,
+          properties: { id: roof.id, selected: roof.id === selectedCustomId },
+        })),
+    });
+  }, [ready, customRoofs, selectedCustomId, tool]);
+
+  const startDrawing = () => {
+    const map = mapRef.current;
+    if (map && map.getZoom() < DRAW_MIN_ZOOM) map.flyTo({ zoom: DRAW_START_ZOOM, speed: 1.6 });
+    onToolStart?.();
+  };
+
   // Keep the map's visual center clear of the floating panel. The first time, also fit the
   // study area into the uncovered part; later the view slides as the panel opens or closes.
   useEffect(() => {
@@ -600,15 +841,28 @@ export default function SolarMap({ pvoutRange, selectedGeometry, focus, onSelect
   }
 
   return (
-    <div className="solar-map">
+    <div className={`solar-map${tool !== "off" ? " solar-map-drawing" : ""}`}>
       <div ref={containerRef} className="solar-map-canvas" />
 
       <div className="map-controls-top">
+        {onToolStart && (
+          <DrawControls
+            tool={tool}
+            draft={draft}
+            onStart={startDrawing}
+            onUndo={() => editorRef.current?.undo()}
+            onCancel={() => editorRef.current?.cancel()}
+            onFinish={() => editorRef.current?.finish()}
+            onDone={onEditDone}
+          />
+        )}
         <MapSettings settings={settings} onChange={setSettings} />
       </div>
 
-      <div className="map-status" role="status">
-        {loading ? (
+      <div className={`map-status${tool !== "off" ? " map-status-drawing" : ""}`} role="status">
+        {tool !== "off" ? (
+          <DrawStatus tool={tool} draft={draft} replacesOldest={drawReplacesOldest} />
+        ) : loading ? (
           <span className="map-chip">
             <LoaderCircle size={15} className="spin" /> Memuat data…
           </span>

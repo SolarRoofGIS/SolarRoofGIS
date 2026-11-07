@@ -4,7 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { fetchBuildingDetail, fetchJson } from "../api";
 import { formatNumber } from "../format";
 import SiteFooter from "../layout/SiteFooter";
-import { NO_DATA_COLOR, PVOUT_RAMP } from "../map/colors";
+import { pvoutCss } from "../map/colors";
+import RoofOutline from "../map/RoofOutline";
 import "./Pages.css";
 
 // A 690 m² roof just north of Kebun Raya Bogor, shown as a live example on the home page.
@@ -33,45 +34,6 @@ function formatMillions(value) {
   return `${formatNumber(value / 1e6, 2)} juta`;
 }
 
-function pvoutColor(solar) {
-  const range = solar.pvoutRange;
-  if (solar.pvout === null || !range) return NO_DATA_COLOR;
-  const share = Math.min(Math.max((solar.pvout - range.min) / (range.max - range.min), 0), 1);
-  return PVOUT_RAMP[Math.round(share * (PVOUT_RAMP.length - 1))];
-}
-
-// The roof outline in local metres, scaled into the drawing, with a 10 m scale bar.
-function RoofOutline({ geometry, color }) {
-  const size = { width: 280, height: 200, margin: 18 };
-  const rings = geometry.type === "Polygon" ? geometry.coordinates : geometry.coordinates.flat();
-  const lat0 = rings[0][0][1];
-  const metresPerLon = 111320 * Math.cos((lat0 * Math.PI) / 180);
-  const points = rings.map((ring) => ring.map(([lon, lat]) => [lon * metresPerLon, -lat * 110574]));
-  const xs = points.flat().map(([x]) => x);
-  const ys = points.flat().map(([, y]) => y);
-  const [minX, minY] = [Math.min(...xs), Math.min(...ys)];
-  const scale = Math.min(
-    (size.width - size.margin * 2) / (Math.max(...xs) - minX),
-    (size.height - size.margin * 2 - 16) / (Math.max(...ys) - minY),
-  );
-  const path = points
-    .map((ring) => `M${ring.map(([x, y]) => `${((x - minX) * scale + size.margin).toFixed(1)},${((y - minY) * scale + size.margin).toFixed(1)}`).join("L")}Z`)
-    .join(" ");
-  const bar = 10 * scale;
-
-  return (
-    <svg className="roof-outline" viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label="Bentuk atap contoh">
-      <path d={path} fill={color} fillRule="evenodd" stroke="#1c2421" strokeWidth="1.2" />
-      <g transform={`translate(${size.margin} ${size.height - 12})`}>
-        <path d={`M0,-4V0H${bar}V-4`} fill="none" stroke="#545d59" />
-        <text x={bar + 6} y="0" fontSize="11" fill="#545d59">
-          10 m
-        </text>
-      </g>
-    </svg>
-  );
-}
-
 function ExampleRoof() {
   const [detail, setDetail] = useState(null);
 
@@ -97,7 +59,14 @@ function ExampleRoof() {
   return (
     <figure className="example">
       <div className="example-drawing">
-        {detail && <RoofOutline geometry={detail.building.geometry} color={pvoutColor(solar)} />}
+        {detail && (
+          <RoofOutline
+            geometry={detail.building.geometry}
+            color={pvoutCss(solar.pvout, solar.pvoutRange)}
+            scaleBar
+            label="Bentuk atap contoh"
+          />
+        )}
       </div>
       <table className="example-table">
         <tbody>

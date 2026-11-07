@@ -35,7 +35,7 @@ npm install
 npm start
 ```
 
-The frontend opens at `http://localhost:3000` with three pages: Beranda (`/`, summary statistics and a live example roof), Peta (`/peta`, the map, with a Lapisan menu for the basemap, the roof polygons and solar overlay on/off, and a separate opacity for each, remembered per browser; `/peta?atap=<id>` opens a roof directly), and Tentang (`/tentang`, data, method, and limitations).
+The frontend opens at `http://localhost:3000` with three pages: Beranda (`/`, summary statistics and a live example roof), Peta (`/peta`, the map, with a Lapisan menu for the basemap, the roof polygons and solar overlay on/off, and a separate opacity for each, remembered per browser; a Gambar atap tool for drawing a roof outline or reshaping a database roof; `/peta?atap=<id>` opens a roof directly), and Tentang (`/tentang`, data, method, and limitations).
 
 MapLibre GL 6 ships its Web Worker as a separate module that breaks when webpack/Babel bundles it, so `npm start` and `npm run build` first copy `node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs` into `public/` (the copy is gitignored). The map needs a browser with WebGL2; without it the map page shows an explanation instead.
 
@@ -47,6 +47,7 @@ The API reads `public.bogor_buildings` and `public.batas_bogor` from PostgreSQL 
 - `GET /api/tiles/buildings/{z}/{x}/{y}.pbf` (Mapbox vector tiles of every building, zoom 15–16)
 - `GET /api/tiles/overview/{z}/{x}/{y}.pbf` (buildings summed into grid cells, zoom 8–14)
 - `GET /api/buildings/:id` (building details, geometry, and rooftop solar estimate for the info panel)
+- `POST /api/roofs/estimate` with `{ "geometry": <GeoJSON Polygon or MultiPolygon> }` (the same estimate for a roof drawn on the map)
 - `GET /api/stats` (building count, roof area, and technical potential per region, for the home page)
 - `GET /api/method` (calculation assumptions and PVOUT range, for the about page)
 - `GET /api/boundaries` (simplified Kota and Kabupaten Bogor outlines)
@@ -71,6 +72,12 @@ Clicking a roof shows the building attributes and a solar estimate from `GET /ap
 3. **Panels:** whole 550 Wp modules (1.134 × 2.278 m ≈ 2.58 m²) that fit in the usable area; roofs fitting fewer than 2 are marked unsuitable.
 4. **Energy:** installed kWp × PVOUT (kWh/kWp, losses already included by Global Solar Atlas), yearly and per month from the monthly PVOUT layers.
 5. **Indicators:** electricity value at the PLN R-1 tariff (Rp1,444.70/kWh), CO₂ avoided at 0.87 kg/kWh, and how the location's PVOUT ranks against the rest of the Bogor study area.
+
+## Drawn roofs
+
+Where the Google outline is missing or does not fit, the **Gambar atap** button on the map lets the viewer click the corners of a roof (corners snap to nearby building corners and edges; hold Alt to place freely). Double-click, Enter, or clicking the first corner closes the outline; Backspace removes the last corner and Esc cancels. **Ubah bentuknya** in a selected roof's panel copies its outline for reshaping instead. While reshaping, corners can be dragged, the small midpoints add a corner, and right-click or double-click removes one ([`frontend/src/map/roofDrawing.js`](frontend/src/map/roofDrawing.js)).
+
+The outline is sent to `POST /api/roofs/estimate` ([`backend/routes/roofs.js`](backend/routes/roofs.js)), which repairs self-crossing outlines with `ST_MakeValid`, requires the roof to lie in Kota or Kabupaten Bogor, and runs the same steps as a database roof ([`backend/roofEstimate.js`](backend/roofEstimate.js)). The drawn roof is kept in the browser's local storage and can be downloaded as GeoJSON with its estimate. Up to two drawn roofs are kept; drawing another replaces the oldest.
 
 ## Photovoltaic data
 

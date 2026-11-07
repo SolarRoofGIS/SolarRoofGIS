@@ -55,6 +55,25 @@
   z-index: 3;
   top: 12px;
   right: 56px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* While drawing, the instructions sit at the bottom so they stay clear of the buttons. */
+.map-status-drawing {
+  top: auto;
+  bottom: 36px;
+}
+
+.map-status-drawing .map-chip {
+  max-width: min(420px, calc(100vw - var(--panel-inset, 0px) - 48px));
+  white-space: normal;
+}
+
+.draw-controls {
+  display: flex;
+  gap: 6px;
 }
 
 .map-control-button {
@@ -76,6 +95,34 @@
 
 .map-control-button:hover {
   border-color: #c9d4cf;
+}
+
+.map-control-button:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.map-control-icon {
+  width: 36px;
+  justify-content: center;
+  padding: 0;
+}
+
+.map-control-primary {
+  border-color: var(--forest);
+  color: #ffffff;
+  background: var(--forest);
+}
+
+.map-control-primary:hover {
+  border-color: var(--forest);
+  background: var(--forest-deep);
+}
+
+.map-control-primary:disabled {
+  border-color: var(--line);
+  color: var(--ink-faint);
+  background: var(--surface);
 }
 
 .settings-panel {
@@ -391,10 +438,11 @@
 }
 
 @media (max-width: 720px) {
+  /* Clear of the drawing and Lapisan buttons and the zoom control on the right. */
   .map-status {
     top: 10px;
     left: 10px;
-    max-width: calc(100% - 120px);
+    max-width: calc(100% - 160px);
     transform: none;
   }
 
@@ -407,12 +455,22 @@
     right: 52px;
   }
 
+  /* The bottom sheet covers the lower edge, so while drawing the hint takes the legend's place. */
+  .map-status-drawing {
+    top: 58px;
+    max-width: calc(100% - 20px);
+  }
+
+  .solar-map-drawing .map-legend {
+    display: none;
+  }
+
   .map-settings-label {
     display: none;
   }
 
   .map-legend {
-    top: 58px;
+    top: 72px;
     right: auto;
     bottom: auto;
     left: 10px;

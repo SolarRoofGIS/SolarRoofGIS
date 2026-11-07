@@ -104,10 +104,90 @@
   font-size: 14px;
 }
 
+.intro-custom {
+  display: block;
+  margin: 12px auto 0;
+}
+
 .sidebar-intro .sidebar-source {
   margin-top: 14px;
   color: var(--ink-faint);
   font-size: 12px;
+}
+
+/* An inline action that reads as a link inside running text. */
+.text-button {
+  padding: 0;
+  border: 0;
+  color: var(--forest);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.text-button:hover {
+  color: var(--forest-deep);
+}
+
+.reshape-hint {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.roof-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.button-compact {
+  padding: 6px 11px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.button-compact:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.roof-delete {
+  margin-left: auto;
+}
+
+.roof-delete:hover {
+  color: #a1301c;
+}
+
+.other-roof {
+  margin: -4px 0 14px !important;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.custom-note {
+  margin-bottom: 12px !important;
+  padding: 8px 10px;
+  border-left: 3px solid var(--orange);
+  color: var(--ink-soft);
+  background: var(--mist);
+  font-size: 12.5px;
+}
+
+.is-refreshing {
+  opacity: 0.55;
+  transition: opacity 0.15s;
 }
 
 .sidebar-loading,
@@ -136,9 +216,35 @@
   border-bottom: 1px solid var(--line);
 }
 
+.hero-shape {
+  height: 190px;
+  margin: 0 0 12px;
+  border-radius: 4px;
+  background-color: var(--page);
+  background-image: linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 .hero-label {
   color: var(--ink-soft);
   font-size: 12.5px;
+}
+
+.hero-rate {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.hero-rate strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.hero-rate + .hero-sub {
+  margin-top: 6px;
 }
 
 .hero-value {

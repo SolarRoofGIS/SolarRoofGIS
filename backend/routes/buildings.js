@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../db");
 const pvout = require("../pvout");
+const { estimateAt } = require("../roofEstimate");
 const solar = require("../solar");
 
 const router = express.Router();
@@ -123,7 +124,7 @@ router.get("/:id", async (request, response) => {
               b.longitude,
               b.confidence,
               b.full_plus_code,
-              ST_AsGeoJSON(b.geom, 6)::json AS geometry,
+              ST_AsGeoJSON(b.geom, 7)::json AS geometry,
               ST_Area(b.geom_utm) AS footprint_m2,
               ST_Area(ST_Buffer(b.geom_utm, -$2::float8)) AS setback_m2,
               (SELECT a.wadmkk
@@ -138,10 +139,6 @@ router.get("/:id", async (request, response) => {
     }
 
     const building = rows[0];
-    const raster = await pvout.rastersReady.catch(() => null);
-    const at = (layer) => (raster ? pvout.sample(layer, building.longitude, building.latitude) : null);
-    const annualPvout = raster ? at(raster.annual) : null;
-
     return response.json({
       building: {
         id: building.id,
@@ -152,18 +149,12 @@ router.get("/:id", async (request, response) => {
         region: building.region,
         geometry: building.geometry,
       },
-      solar: {
-        ...solar.estimateSolar({
-          footprintM2: building.footprint_m2,
-          setbackM2: building.setback_m2,
-          pvout: annualPvout,
-          monthlyPvout: raster ? raster.monthly.map(at) : Array(12).fill(null),
-          optimumTilt: raster ? at(raster.opta) : null,
-        }),
-        pvoutRank: raster ? pvout.rank(raster, annualPvout) : null,
-        pvoutRange: raster ? raster.range : null,
-      },
-      assumptions: { ...solar.ASSUMPTIONS, panelAreaM2: solar.PANEL_AREA_M2 },
+      ...(await estimateAt({
+        footprintM2: building.footprint_m2,
+        setbackM2: building.setback_m2,
+        longitude: building.longitude,
+        latitude: building.latitude,
+      })),
     });
   } catch (error) {
     console.error(`Building detail query failed for ${id}:`, error);
