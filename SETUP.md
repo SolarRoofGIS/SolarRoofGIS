@@ -148,7 +148,7 @@ Browser terbuka di <http://localhost:3000>. Peta membutuhkan browser dengan WebG
 | `/api/health` → `password authentication failed` | `DB_PASSWORD` di `backend/.env` salah. |
 | `/api/health` → `ECONNREFUSED` atau timeout | `DB_PORT` tidak sesuai, atau layanan PostgreSQL belum berjalan. |
 | `/api/health` → `"ok": false` | Tabel `bogor_buildings` tidak ditemukan. Cek nama tabel dan schema `public` di langkah 4b. |
-| Error `relation "public.batas_bogor" does not exist` | Layer batas belum diimpor, atau diimpor dengan nama lain. |
+| Atap gambar berlabel "Wilayah belum diketahui", garis batas dan overlay surya tidak muncul | Tabel `batas_bogor` belum diimpor atau namanya berbeda. Menggambar dan menganalisis atap tetap bisa dicoba tanpa tabel ini. |
 | Error `column "id"` / `column "geom" does not exist` | Primary key atau kolom geometri tidak bernama `id` / `geom` saat impor. Impor ulang dengan *Overwrite*. |
 | Halaman peta: "Peta tidak dapat ditampilkan" | Browser atau driver grafis tidak mendukung WebGL2. Aktifkan *hardware acceleration* atau coba browser lain. |
 | Frontend tampil tetapi data kosong | Backend tidak berjalan di port 5000. Pastikan `npm run dev` di folder `backend` aktif. |

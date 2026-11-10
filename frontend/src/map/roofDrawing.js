@@ -1,6 +1,7 @@
 // Drawing and reshaping one roof outline on the MapLibre map. The outline is kept as a list
 // of polygons, each a list of open rings (outer ring first, then holes) of [lng, lat].
 // It is shown through the "draft" source and its layers, defined with the map style.
+import { METRES_PER_LAT, metresPerLng, openRing, polygonsOf } from "./geometry";
 
 // Screen distances in pixels.
 const SNAP_PX = 12;
@@ -9,6 +10,17 @@ const DUPLICATE_PX = 4;
 const HANDLE_PX = 8;
 
 const EMPTY = { type: "FeatureCollection", features: [] };
+const MAP_EVENTS = [
+  ["click", "onClick"],
+  ["dblclick", "onDblClick"],
+  ["mousemove", "onMove"],
+  ["touchmove", "onMove"],
+  ["mousedown", "onDown"],
+  ["touchstart", "onDown"],
+  ["mouseup", "onUp"],
+  ["touchend", "onUp"],
+  ["contextmenu", "onContextMenu"],
+];
 
 function point(coordinates, properties) {
   return { type: "Feature", geometry: { type: "Point", coordinates }, properties };
@@ -18,7 +30,7 @@ function closeRing(ring) {
   return [...ring, ring[0]];
 }
 
-export function toGeometry(polygons) {
+function toGeometry(polygons) {
   const coordinates = polygons.map((rings) => rings.map(closeRing));
   return coordinates.length === 1
     ? { type: "Polygon", coordinates: coordinates[0] }
@@ -26,25 +38,18 @@ export function toGeometry(polygons) {
 }
 
 function fromGeometry(geometry) {
-  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  return polygons.map((rings) =>
-    rings.map((ring) => {
-      const [first, last] = [ring[0], ring[ring.length - 1]];
-      const open = first[0] === last[0] && first[1] === last[1] ? ring.slice(0, -1) : ring;
-      return open.map(([lng, lat]) => [lng, lat]);
-    }),
-  );
+  return polygonsOf(geometry).map((rings) => rings.map((ring) => openRing(ring).map(([lng, lat]) => [lng, lat])));
 }
 
 // Planar area in local metres; within a single roof the error is far below a square metre.
 function ringAreaM2(ring) {
   if (ring.length < 3) return 0;
-  const metresPerLng = 111320 * Math.cos((ring[0][1] * Math.PI) / 180);
+  const perLng = metresPerLng(ring[0][1]);
   let twice = 0;
   for (let index = 0; index < ring.length; index += 1) {
     const [x1, y1] = ring[index];
     const [x2, y2] = ring[(index + 1) % ring.length];
-    twice += x1 * metresPerLng * (y2 * 110574) - x2 * metresPerLng * (y1 * 110574);
+    twice += x1 * perLng * (y2 * METRES_PER_LAT) - x2 * perLng * (y1 * METRES_PER_LAT);
   }
   return Math.abs(twice) / 2;
 }
@@ -66,12 +71,6 @@ function closestOnSegment(p, a, b) {
   const length = dx * dx + dy * dy;
   const t = length === 0 ? 0 : Math.min(Math.max(((p.x - a.x) * dx + (p.y - a.y) * dy) / length, 0), 1);
   return { x: a.x + t * dx, y: a.y + t * dy };
-}
-
-function featureRings(geometry) {
-  if (geometry.type === "Polygon") return geometry.coordinates;
-  if (geometry.type === "MultiPolygon") return geometry.coordinates.flat();
-  return [];
 }
 
 function isTyping(event) {
@@ -101,15 +100,7 @@ export class RoofEditor {
     this.polygons = mode === "edit" ? fromGeometry(geometry) : [[[]]];
     const { map } = this;
     map.doubleClickZoom.disable();
-    map.on("click", this.onClick);
-    map.on("dblclick", this.onDblClick);
-    map.on("mousemove", this.onMove);
-    map.on("touchmove", this.onMove);
-    map.on("mousedown", this.onDown);
-    map.on("touchstart", this.onDown);
-    map.on("mouseup", this.onUp);
-    map.on("touchend", this.onUp);
-    map.on("contextmenu", this.onContextMenu);
+    for (const [type, handler] of MAP_EVENTS) map.on(type, this[handler]);
     document.addEventListener("keydown", this.onKey);
     map.getCanvas().style.cursor = mode === "draw" ? "crosshair" : "";
     this.render();
@@ -118,15 +109,7 @@ export class RoofEditor {
   stop() {
     if (this.mode === "off") return;
     const { map } = this;
-    map.off("click", this.onClick);
-    map.off("dblclick", this.onDblClick);
-    map.off("mousemove", this.onMove);
-    map.off("touchmove", this.onMove);
-    map.off("mousedown", this.onDown);
-    map.off("touchstart", this.onDown);
-    map.off("mouseup", this.onUp);
-    map.off("touchend", this.onUp);
-    map.off("contextmenu", this.onContextMenu);
+    for (const [type, handler] of MAP_EVENTS) map.off(type, this[handler]);
     document.removeEventListener("keydown", this.onKey);
     map.doubleClickZoom.enable();
     map.getCanvas().style.cursor = "";
@@ -174,7 +157,9 @@ export class RoofEditor {
       [pointer.x + SNAP_PX, pointer.y + SNAP_PX],
     ];
     const buildingRings = map.getLayer("buildings-fill")
-      ? map.queryRenderedFeatures(box, { layers: ["buildings-fill"] }).flatMap((feature) => featureRings(feature.geometry))
+      ? map
+          .queryRenderedFeatures(box, { layers: ["buildings-fill"] })
+          .flatMap((feature) => polygonsOf(feature.geometry).flat())
       : [];
     const ownCorners = this.polygons.flatMap((rings, p) =>
       rings.flatMap((ring, r) => ring.filter((_, v) => !(skip && skip.p === p && skip.r === r && skip.v === v))),
@@ -295,7 +280,7 @@ export class RoofEditor {
       else if (event.key === "Backspace" || event.key === "Delete") {
         event.preventDefault();
         this.undo();
-      } else return;
+      }
     } else if (this.mode === "edit" && (event.key === "Escape" || event.key === "Enter")) {
       this.callbacks().onDone();
     }
@@ -309,8 +294,14 @@ export class RoofEditor {
     if (this.mode === "draw") {
       const ring = this.drawnRing;
       const path = this.cursor ? [...ring, this.cursor.lngLat] : ring;
-      if (path.length >= 3) features.push({ type: "Feature", geometry: { type: "Polygon", coordinates: [closeRing(path)] }, properties: {} });
-      if (path.length >= 2) features.push({ type: "Feature", geometry: { type: "LineString", coordinates: path }, properties: {} });
+      if (path.length >= 3)
+        features.push({
+          type: "Feature",
+          geometry: { type: "Polygon", coordinates: [closeRing(path)] },
+          properties: {},
+        });
+      if (path.length >= 2)
+        features.push({ type: "Feature", geometry: { type: "LineString", coordinates: path }, properties: {} });
       ring.forEach((corner, v) => features.push(point(corner, { kind: "vertex", first: v === 0 && ring.length >= 3 })));
       areaM2 = ringAreaM2(path);
       vertices = ring.length;

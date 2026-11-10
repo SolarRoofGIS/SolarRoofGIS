@@ -9,6 +9,7 @@ const healthRoute = require("./routes/health");
 const methodRoute = require("./routes/method");
 const pvoutRoute = require("./routes/pvout");
 const roofsRoute = require("./routes/roofs");
+const financeRoute = require("./routes/finance");
 const statsRoute = require("./routes/stats");
 const tilesRoute = require("./routes/tiles");
 
@@ -25,6 +26,7 @@ app.use("/api/health", healthRoute);
 app.use("/api/buildings", buildingsRoute);
 app.use("/api/pvout", pvoutRoute);
 app.use("/api/roofs", roofsRoute);
+app.use("/api/finance", financeRoute);
 app.use("/api/boundaries", boundariesRoute);
 app.use("/api/stats", statsRoute);
 app.use("/api/method", methodRoute);

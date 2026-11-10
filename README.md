@@ -48,6 +48,7 @@ The API reads `public.bogor_buildings` and `public.batas_bogor` from PostgreSQL 
 - `GET /api/tiles/overview/{z}/{x}/{y}.pbf` (buildings summed into grid cells, zoom 8–14)
 - `GET /api/buildings/:id` (building details, geometry, and rooftop solar estimate for the info panel)
 - `POST /api/roofs/estimate` with `{ "geometry": <GeoJSON Polygon or MultiPolygon> }` (the same estimate for a roof drawn on the map)
+- `POST /api/finance/estimate` with `{ "panelCount", "pvout", "monthlyBillRp", "panelType" }` (investment, bill savings, payback, and a 25-year cost projection)
 - `GET /api/stats` (building count, roof area, and technical potential per region, for the home page)
 - `GET /api/method` (calculation assumptions and PVOUT range, for the about page)
 - `GET /api/boundaries` (simplified Kota and Kabupaten Bogor outlines)
@@ -69,15 +70,19 @@ Clicking a roof shows the building attributes and a solar estimate from `GET /ap
 
 1. **Setback area:** PostGIS shrinks the footprint by a 0.5 m edge clearance (`ST_Buffer` in UTM 48S).
 2. **Usable area:** 70% of the setback area, for roof pitch, obstructions, shading, and access.
-3. **Panels:** whole 550 Wp modules (1.134 × 2.278 m ≈ 2.58 m²) that fit in the usable area; roofs fitting fewer than 2 are marked unsuitable.
+3. **Panels:** whole 550 Wp modules (1.134 × 2.278 m ≈ 2.58 m²) that fit in the usable area, capped by how many can really be laid out in straight rows on the setback outline ([`backend/panelLayout.js`](backend/panelLayout.js)), so a narrow roof gets fewer or none; roofs fitting fewer than 2 are marked unsuitable.
 4. **Energy:** installed kWp × PVOUT (kWh/kWp, losses already included by Global Solar Atlas), yearly and per month from the monthly PVOUT layers.
 5. **Indicators:** electricity value at the PLN R-1 tariff (Rp1,444.70/kWh), CO₂ avoided at 0.87 kg/kWh, and how the location's PVOUT ranks against the rest of the Bogor study area.
+
+## Financial simulation
+
+Below a suitable roof's estimate, the viewer enters a monthly PLN bill, a panel type, and how many panels to install (the most the roof holds by default), and `POST /api/finance/estimate` ([`backend/finance.js`](backend/finance.js), assumptions at the top) returns the investment at Rp15 million per kWp (85% panels and inverter, 15% balance of system and installation), monthly savings, Payback Period, and cumulative cost with and without panels over 25 years. Polycrystalline panels scale the roof's capacity by their lower efficiency (15%, against 21% for the default module). Since Permen ESDM 2/2024, electricity sent to the grid no longer reduces the bill, so savings are capped at the bill; they assume all production up to that cap is used on site, which makes them an upper limit. The simulation does not yet suggest a system size from the connection's power limit.
 
 ## Drawn roofs
 
 Where the Google outline is missing or does not fit, the **Gambar atap** button on the map lets the viewer click the corners of a roof (corners snap to nearby building corners and edges; hold Alt to place freely). Double-click, Enter, or clicking the first corner closes the outline; Backspace removes the last corner and Esc cancels. **Ubah bentuknya** in a selected roof's panel copies its outline for reshaping instead. While reshaping, corners can be dragged, the small midpoints add a corner, and right-click or double-click removes one ([`frontend/src/map/roofDrawing.js`](frontend/src/map/roofDrawing.js)).
 
-The outline is sent to `POST /api/roofs/estimate` ([`backend/routes/roofs.js`](backend/routes/roofs.js)), which repairs self-crossing outlines with `ST_MakeValid`, requires the roof to lie in Kota or Kabupaten Bogor, and runs the same steps as a database roof ([`backend/roofEstimate.js`](backend/roofEstimate.js)). The drawn roof is kept in the browser's local storage and can be downloaded as GeoJSON with its estimate. Up to two drawn roofs are kept; drawing another replaces the oldest.
+The outline is sent to `POST /api/roofs/estimate` ([`backend/routes/roofs.js`](backend/routes/roofs.js)), which repairs self-crossing outlines with `ST_MakeValid`, requires the roof to lie in Kota or Kabupaten Bogor (if `batas_bogor` has not been imported, it only checks the study-area rectangle and leaves the region unknown), and runs the same steps as a database roof ([`backend/roofEstimate.js`](backend/roofEstimate.js)). The drawn roof is kept in the browser's local storage and can be downloaded as GeoJSON with its estimate. Up to two drawn roofs are kept; drawing another replaces the oldest.
 
 ## Photovoltaic data
 

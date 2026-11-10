@@ -1,4 +1,5 @@
 const express = require("express");
+const { errorDetail } = require("../httpErrors");
 const pool = require("../db");
 const { panelCountSql, pvoutGridParams, pvoutSql, PANEL_KWP } = require("../buildingSql");
 
@@ -80,7 +81,7 @@ router.get("/", async (_request, response) => {
   } catch (error) {
     response.status(503).json({
       error: "Statistik belum dapat dihitung.",
-      ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+      ...errorDetail(error),
     });
   }
 });

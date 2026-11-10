@@ -4,8 +4,7 @@ const { fromFile } = require("geotiff");
 // Global Solar Atlas layers clipped to Bogor. PVOUT is the specific yield in kWh/kWp
 // (yearly total, or monthly totals in monthly/), about 1 km per pixel; OPTA is the
 // optimum panel tilt in degrees on a coarser grid.
-const PHOTOVOLTAIC_DIR =
-  process.env.PHOTOVOLTAIC_DIR || path.join(__dirname, "..", "data_bogor", "photovoltaic");
+const PHOTOVOLTAIC_DIR = process.env.PHOTOVOLTAIC_DIR || path.join(__dirname, "..", "data_bogor", "photovoltaic");
 const PVOUT_PATH = process.env.PVOUT_PATH || path.join(PHOTOVOLTAIC_DIR, "PVOUT.tif");
 // Pixels masked out by the alpha band are filled from the nearest valid pixel
 // within this many cells, so buildings along the clipped edge still get a value.
@@ -83,11 +82,7 @@ function filledGrid(raster) {
   for (let row = 0; row < height; row += 1) {
     for (let column = 0; column < width; column += 1) {
       values.push(
-        sample(
-          raster,
-          originX + (column + 0.5) * raster.resolutionX,
-          originY + (row + 0.5) * raster.resolutionY,
-        ),
+        sample(raster, originX + (column + 0.5) * raster.resolutionX, originY + (row + 0.5) * raster.resolutionY),
       );
     }
   }

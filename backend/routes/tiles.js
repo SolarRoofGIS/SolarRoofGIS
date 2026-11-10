@@ -1,11 +1,12 @@
 const express = require("express");
+const { errorDetail } = require("../httpErrors");
+const { STUDY_BOUNDS } = require("../studyArea");
 const pool = require("../db");
 const { panelCountSql, pvoutGridParams, pvoutSql, PANEL_KWP } = require("../buildingSql");
 
 const router = express.Router();
 const TILE_EXTENT = 4096;
 const CACHE_LIMIT = 3000;
-const STUDY_BOUNDS = [106.401214, -6.788518, 107.227782, -6.302244];
 
 // Roofs are tiled at zoom 15–16: a zoom-14 tile over central Bogor holds ~17,000 roofs
 // (over 1 MB), a zoom-15 tile about 3,700 (~140 kB). MapLibre overzooms the zoom-16
@@ -27,9 +28,7 @@ function tileBounds(z, x, y) {
 }
 
 function outsideStudyArea([west, south, east, north]) {
-  return (
-    east < STUDY_BOUNDS[0] || west > STUDY_BOUNDS[2] || north < STUDY_BOUNDS[1] || south > STUDY_BOUNDS[3]
-  );
+  return east < STUDY_BOUNDS[0] || west > STUDY_BOUNDS[2] || north < STUDY_BOUNDS[1] || south > STUDY_BOUNDS[3];
 }
 
 function sendTile(response, tile) {
@@ -137,10 +136,10 @@ function tileRoute(name, [minZoom, maxZoom], build) {
     try {
       return sendTile(response, await cachedTile(name, build, z, x, y));
     } catch (error) {
-      console.error(`Tile ${name}/${z}/${x}/${y} failed:`, error);
+      console.error(`Tile ${name}/${z}/${x}/${y} failed: ${error.message}`);
       return response.status(500).json({
         error: "Tile tidak dapat dibuat.",
-        ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+        ...errorDetail(error),
       });
     }
   });

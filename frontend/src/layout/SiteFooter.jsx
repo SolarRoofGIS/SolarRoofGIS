@@ -5,8 +5,8 @@ export default function SiteFooter() {
     <footer className="site-footer">
       <div className="site-footer-inner">
         <p>
-          SolarRoofGIS, proyek Kelompok 14, IPB University. Perkiraan awal potensi listrik surya atap untuk
-          perencanaan, bukan pengganti survei lapangan.
+          SolarRoofGIS, proyek Kelompok 14, IPB University. Perkiraan awal potensi listrik surya atap untuk perencanaan,
+          bukan pengganti survei lapangan.
         </p>
         <nav className="footer-links" aria-label="Tautan kaki halaman">
           <Link to="/peta">Peta</Link>

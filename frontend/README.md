@@ -1,6 +1,6 @@
 # Frontend
 
-Create React App frontend using React Leaflet. The Express/PostGIS API is in `../backend`, and the separate data-checking webmap remains in `ref/tools/webmap/`.
+Create React App with MapLibre GL JS, React Router, and Lucide icons. The Express/PostGIS API is in `../backend`.
 
 ## Run locally
 
@@ -11,4 +11,4 @@ npm install
 npm start
 ```
 
-Open `http://localhost:3000`. The starter map is centered on Bogor and uses OpenStreetMap tiles.
+Open `http://localhost:3000`. Set `REACT_APP_API_URL` if the API is not at `http://localhost:5000`.

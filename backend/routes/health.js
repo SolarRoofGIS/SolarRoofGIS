@@ -1,4 +1,5 @@
 const express = require("express");
+const { errorDetail } = require("../httpErrors");
 const pool = require("../db");
 
 const router = express.Router();
@@ -25,7 +26,7 @@ router.get("/", async (_request, response) => {
     response.status(503).json({
       ok: false,
       storage: "PostGIS",
-      ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+      ...errorDetail(error),
       datasets: { google: { available: false } },
     });
   }

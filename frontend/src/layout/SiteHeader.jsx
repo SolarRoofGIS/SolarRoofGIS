@@ -16,7 +16,7 @@ function BrandMark() {
   );
 }
 
-export function Brand() {
+function Brand() {
   return (
     <Link to="/" className="brand" aria-label="SolarRoofGIS, ke beranda">
       <BrandMark />

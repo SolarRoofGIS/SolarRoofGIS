@@ -1,6 +1,6 @@
 // Yellow → orange ramp: pale yellow for less sun, deep orange for the most.
 export const PVOUT_RAMP = ["#fff1a8", "#fdd248", "#f9a72b", "#ef7a1c", "#cf4f0c"];
-export const NO_DATA_COLOR = "#b9c2bf";
+const NO_DATA_COLOR = "#b9c2bf";
 
 function rampExpression(input, stops) {
   return ["interpolate", ["linear"], input, ...stops.flatMap((stop, index) => [stop, PVOUT_RAMP[index]])];

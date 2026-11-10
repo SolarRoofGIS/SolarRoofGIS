@@ -45,7 +45,8 @@ const LIMITATIONS = [
   "Luas atap adalah luas tapak bangunan dari atas. Kemiringan atap, bahan, dan kekuatan struktur tidak diketahui.",
   "Bayangan dari pohon, gedung tinggi, atau perbukitan tidak dihitung satu per satu, hanya lewat faktor 70%.",
   "PVOUT beresolusi sekitar 1 km, jadi atap yang berdekatan mendapat nilai yang sama.",
-  "Sejak Permen ESDM 2/2024, listrik yang dikirim ke jaringan PLN tidak lagi mengurangi tagihan. Nilai rupiah adalah nilai energinya, bukan penghematan.",
+  "Sejak Permen ESDM 2/2024, listrik yang dikirim ke jaringan PLN tidak lagi mengurangi tagihan. Nilai listrik adalah nilai energinya, sedangkan penghematan dihitung terpisah di simulasi finansial.",
+  "Simulasi finansial memakai biaya rata-rata per kWp dan menganggap seluruh produksi terpakai sendiri sampai sebesar pengeluaran listrik, jadi penghematannya adalah batas atas.",
   "Tarif listrik dan faktor emisi jaringan dapat berubah dan perlu diperbarui secara berkala.",
 ];
 
@@ -78,17 +79,20 @@ function MethodSteps({ assumptions }) {
           {value(
             `${a?.panel.powerWp} Wp (${formatNumber(a?.panel.widthM, 3)} × ${formatNumber(a?.panel.lengthM, 3)} m ≈ ${formatNumber(a?.panelAreaM2, 2)} m²)`,
           )}{" "}
-          dan dibulatkan ke bawah. Atap yang muat kurang dari {value(a?.minPanels)} panel dianggap tidak layak.
+          dan dibulatkan ke bawah, lalu dicek apakah panel sebanyak itu benar-benar muat tersusun dalam baris pada
+          bentuk atapnya. Atap yang muat kurang dari {value(a?.minPanels)} panel dianggap tidak layak.
         </p>
       </li>
       <li>
         <h3>Listrik per tahun</h3>
         <p>
-          Kapasitas (kWp) dikali PVOUT di lokasi atap. PVOUT sudah memperhitungkan rugi-rugi sistem seperti
-          inverter, kabel, debu, dan suhu, jadi tidak ada pengurangan tambahan. Produksi per bulan memakai 12
-          lapisan PVOUT bulanan.
+          Kapasitas (kWp) dikali PVOUT di lokasi atap. PVOUT sudah memperhitungkan rugi-rugi sistem seperti inverter,
+          kabel, debu, dan suhu, jadi tidak ada pengurangan tambahan. Produksi per bulan memakai 12 lapisan PVOUT
+          bulanan.
         </p>
-        <p className="formula">kWh/tahun = jumlah panel × {value(formatNumber(a?.panel.powerWp / 1000, 2))} kWp × PVOUT</p>
+        <p className="formula">
+          kWh/tahun = jumlah panel × {value(formatNumber(a?.panel.powerWp / 1000, 2))} kWp × PVOUT
+        </p>
       </li>
     </ol>
   );
@@ -121,11 +125,11 @@ export default function AboutPage() {
     ["Panel", a && `${a.panel.powerWp} Wp, ${formatNumber(a.panelAreaM2, 2)} m²`],
     ["Minimal panel per atap", a && a.minPanels],
     ["Tarif listrik PLN", a && `Rp${formatNumber(a.tariffRpPerKwh, 2)}/kWh`],
+    ["Biaya investasi PLTS", a && `Rp${formatNumber(a.finance.costRpPerKwp)}/kWp`],
     ["Faktor emisi Jawa-Bali", a && `${formatNumber(a.gridEmissionKgPerKwh, 2)} kg CO₂/kWh`],
     [
       "Rentang PVOUT di peta",
-      method?.pvoutRange &&
-        `${formatNumber(method.pvoutRange.min)}–${formatNumber(method.pvoutRange.max)} kWh/kWp`,
+      method?.pvoutRange && `${formatNumber(method.pvoutRange.min)}–${formatNumber(method.pvoutRange.max)} kWh/kWp`,
     ],
   ];
 
@@ -135,15 +139,15 @@ export default function AboutPage() {
         <p className="overline">Tentang proyek</p>
         <h1>Tentang SolarRoofGIS</h1>
         <p className="lead">
-          Sistem informasi geografis untuk memperkirakan potensi pembangkit listrik tenaga surya (PLTS) atap di
-          setiap bangunan di Kota dan Kabupaten Bogor, dibuat oleh Kelompok 14, IPB University.
+          Sistem informasi geografis untuk memperkirakan potensi pembangkit listrik tenaga surya (PLTS) atap di setiap
+          bangunan di Kota dan Kabupaten Bogor, dibuat oleh Kelompok 14, IPB University.
         </p>
       </header>
 
       <DocSection id="tujuan" title="Tujuan">
         <p>
-          Indonesia menargetkan bauran energi terbarukan yang jauh lebih besar, dan atap bangunan adalah lahan PLTS
-          yang sudah tersedia. Peta ini membantu melihat seberapa besar potensinya, terutama bagi:
+          Indonesia menargetkan bauran energi terbarukan yang jauh lebih besar, dan atap bangunan adalah lahan PLTS yang
+          sudah tersedia. Peta ini membantu melihat seberapa besar potensinya, terutama bagi:
         </p>
         <dl className="term-list">
           {AUDIENCES.map(({ title, text }) => (

@@ -1,4 +1,5 @@
 const express = require("express");
+const { errorDetail } = require("../httpErrors");
 const pvout = require("../pvout");
 
 const router = express.Router();
@@ -6,7 +7,7 @@ const router = express.Router();
 function sendRasterError(response, error) {
   response.status(503).json({
     error: "Raster PVOUT tidak dapat dibaca.",
-    ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+    ...errorDetail(error),
   });
 }
 

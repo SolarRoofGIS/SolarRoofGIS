@@ -543,3 +543,133 @@
     max-height: 56%;
   }
 }
+
+/* Financial simulation. */
+.finance-inputs {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.finance-inputs label {
+  display: grid;
+  gap: 4px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.finance-inputs input,
+.finance-inputs select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-money {
+  display: flex;
+  align-items: center;
+}
+
+.finance-money > span {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+  background: var(--mist);
+  color: var(--ink-soft);
+}
+
+.finance-money input {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.finance-inputs input:focus-visible,
+.finance-inputs select:focus-visible {
+  border-color: var(--forest);
+  outline: 2px solid var(--forest-soft);
+}
+
+.cost-chart {
+  margin: 14px 0 0;
+}
+
+.cost-chart figcaption {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cost-chart-legend {
+  display: flex;
+  gap: 14px;
+  margin: 4px 0 6px;
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  list-style: none;
+}
+
+.cost-chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cost-chart-legend span {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.cost-chart-plot {
+  position: relative;
+}
+
+.cost-chart-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+
+.cost-chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.cost-chart-tick {
+  fill: var(--ink-faint);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cost-chart-cursor {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+}
+
+.cost-chart-tooltip {
+  position: absolute;
+  top: 8px;
+  display: grid;
+  gap: 1px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: var(--ink);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchBuildingDetail, fetchJson, fetchRoofEstimate } from "../api";
 import SolarMap from "../map/SolarMap";
@@ -6,7 +6,7 @@ import Sidebar from "../sidebar/Sidebar";
 import "./MapPage.css";
 
 // A dense, well-known neighbourhood near Kebun Raya Bogor for the "show me" button.
-const EXAMPLE_VIEW = { center: [-6.5973, 106.7905], zoom: 17 };
+const EXAMPLE_VIEW = { center: [106.7905, -6.5973], zoom: 17 };
 // Matches the bottom-sheet breakpoint in Sidebar.css, the panel width plus its gap, and
 // roughly how much of a phone screen the open bottom sheet covers.
 const PHONE_LAYOUT = "(max-width: 720px)";
@@ -58,8 +58,6 @@ export default function MapPage() {
   const [selectedCustomId, setSelectedCustomId] = useState(null);
   const [customEstimates, setCustomEstimates] = useState({});
   const [tool, setTool] = useState("off");
-  const selectedCustomIdRef = useRef(selectedCustomId);
-  selectedCustomIdRef.current = selectedCustomId;
   const customEstimatesRef = useRef(customEstimates);
   customEstimatesRef.current = customEstimates;
   const phone = useMediaQuery(PHONE_LAYOUT);
@@ -77,7 +75,7 @@ export default function MapPage() {
     const { building } = selection.detail;
     if (String(building.id) !== linkedId) return;
     centeredLinkRef.current = linkedId;
-    setFocus({ center: [building.latitude, building.longitude], zoom: 18.5, key: Date.now() });
+    setFocus({ center: [building.longitude, building.latitude], zoom: 18.5, key: Date.now() });
   }, [selection, linkedId]);
 
   useEffect(() => {
@@ -139,75 +137,64 @@ export default function MapPage() {
     };
   }, [selectedCustomId, selectedCustomGeometry]);
 
-  const addCustomRoof = useCallback((roof) => {
+  const addCustomRoof = (roof) => {
     setCustomRoofs((roofs) => [...roofs, roof].slice(-MAX_DRAWN_ROOFS));
     setSelectedId(null);
     setSelectedCustomId(roof.id);
     setPanelCollapsed(false);
-  }, []);
-
-  const selectBuilding = useCallback((id) => {
+  };
+  const selectBuilding = (id) => {
     setSelectedCustomId(null);
     setSelectedId(id);
     setPanelCollapsed(false);
-  }, []);
-  const clearSelection = useCallback(() => {
-    setSelectedId(null);
-    setSelectedCustomId(null);
-    setTool("off");
-  }, []);
-
-  const startDrawing = useCallback(() => {
-    setSelectedId(null);
-    setSelectedCustomId(null);
-    setTool("draw");
-    // On phones the sheet would cover the roof being traced.
-    if (window.matchMedia(PHONE_LAYOUT).matches) setPanelCollapsed(true);
-  }, []);
-  const finishDrawing = useCallback(
-    (geometry) => {
-      addCustomRoof({ id: newRoofId(), geometry, basedOn: null });
-      setTool("off");
-    },
-    [addCustomRoof],
-  );
-  const cancelDrawing = useCallback(() => setTool("off"), []);
-  const selectCustom = useCallback((id) => {
+  };
+  const selectCustom = (id) => {
     setSelectedId(null);
     setSelectedCustomId(id);
     setTool("off");
     setPanelCollapsed(false);
-  }, []);
-  const editCustom = useCallback(() => setTool("edit"), []);
-  const changeCustom = useCallback((geometry) => {
-    const id = selectedCustomIdRef.current;
-    setCustomRoofs((roofs) => roofs.map((roof) => (roof.id === id ? { ...roof, geometry } : roof)));
-  }, []);
-  const doneEditing = useCallback(() => setTool("off"), []);
-  const deleteCustom = useCallback(() => {
-    const id = selectedCustomIdRef.current;
-    setCustomRoofs((roofs) => roofs.filter((roof) => roof.id !== id));
+  };
+  const clearSelection = () => {
+    setSelectedId(null);
     setSelectedCustomId(null);
     setTool("off");
-  }, []);
+  };
+
+  const stopTool = () => setTool("off");
+  const startDrawing = () => {
+    setSelectedId(null);
+    setSelectedCustomId(null);
+    setTool("draw");
+    // On phones the sheet would cover the roof being traced.
+    if (phone) setPanelCollapsed(true);
+  };
+  const finishDrawing = (geometry) => {
+    addCustomRoof({ id: newRoofId(), geometry, basedOn: null });
+    setTool("off");
+  };
+  const changeCustom = (geometry) => {
+    setCustomRoofs((roofs) => roofs.map((roof) => (roof.id === selectedCustomId ? { ...roof, geometry } : roof)));
+  };
+  const deleteCustom = () => {
+    setCustomRoofs((roofs) => roofs.filter((roof) => roof.id !== selectedCustomId));
+    setSelectedCustomId(null);
+    setTool("off");
+  };
   // Starts a drawn roof from a database roof, to correct an outline that does not fit.
-  const reshapeBuilding = useCallback(
-    (detail) => {
-      addCustomRoof({
-        id: newRoofId(),
-        geometry: detail.building.geometry,
-        basedOn: { id: detail.building.id, footprintM2: detail.solar.footprintM2 },
-      });
-      setTool("edit");
-    },
-    [addCustomRoof],
-  );
-  const togglePanel = useCallback(() => setPanelCollapsed((collapsed) => !collapsed), []);
-  const showExample = useCallback(() => {
+  const reshapeBuilding = (detail) => {
+    addCustomRoof({
+      id: newRoofId(),
+      geometry: detail.building.geometry,
+      basedOn: { id: detail.building.id, footprintM2: detail.solar.footprintM2 },
+    });
+    setTool("edit");
+  };
+
+  const showExample = () => {
     setFocus({ ...EXAMPLE_VIEW, key: Date.now() });
     // On phones the guide sheet covers half the map; tuck it away so the roofs show.
-    if (window.matchMedia(PHONE_LAYOUT).matches) setPanelCollapsed(true);
-  }, []);
+    if (phone) setPanelCollapsed(true);
+  };
 
   const panelInset = phone || panelCollapsed ? 0 : PANEL_INSET;
   // The part of the map the panel covers, so the map centers on what is still visible.
@@ -226,13 +213,13 @@ export default function MapPage() {
         padding={mapPadding}
         tool={tool}
         customRoofs={customRoofs}
-        selectedCustomId={selectedCustom ? selectedCustom.id : null}
+        selectedCustomId={selectedCustom?.id ?? null}
         drawReplacesOldest={customRoofs.length >= MAX_DRAWN_ROOFS}
         onToolStart={startDrawing}
         onDrawFinish={finishDrawing}
-        onDrawCancel={cancelDrawing}
+        onDrawCancel={stopTool}
         onEditChange={changeCustom}
-        onEditDone={doneEditing}
+        onEditDone={stopTool}
         onSelectCustom={selectCustom}
       />
       <Sidebar
@@ -248,13 +235,13 @@ export default function MapPage() {
         }
         customRoofs={customRoofs}
         collapsed={panelCollapsed}
-        onToggleCollapsed={togglePanel}
+        onToggleCollapsed={() => setPanelCollapsed((collapsed) => !collapsed)}
         onClose={clearSelection}
         onExplore={showExample}
         onDraw={startDrawing}
         onSelectCustom={selectCustom}
-        onEditCustom={editCustom}
-        onDoneEditing={doneEditing}
+        onEditCustom={() => setTool("edit")}
+        onDoneEditing={stopTool}
         onDeleteCustom={deleteCustom}
         onReshapeBuilding={reshapeBuilding}
       />

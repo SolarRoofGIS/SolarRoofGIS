@@ -9,7 +9,7 @@ import RoofOutline from "../map/RoofOutline";
 import "./Pages.css";
 
 // A 690 m² roof just north of Kebun Raya Bogor, shown as a live example on the home page.
-export const EXAMPLE_BUILDING_ID = 2332211;
+const EXAMPLE_BUILDING_ID = 2332211;
 
 const STEPS = [
   {
@@ -36,18 +36,20 @@ function formatMillions(value) {
 
 function ExampleRoof() {
   const [detail, setDetail] = useState(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
     fetchBuildingDetail(EXAMPLE_BUILDING_ID)
       .then((result) => active && setDetail(result))
-      .catch(() => {});
+      .catch(() => active && setFailed(true));
     return () => {
       active = false;
     };
   }, []);
 
   const solar = detail?.solar;
+  const placeholder = failed ? "–" : "…";
   const rows = [
     ["Luas atap", solar && `${formatNumber(solar.footprintM2)} m²`],
     ["Bisa dipasangi panel", solar && `${formatNumber(solar.usableM2)} m²`],
@@ -73,12 +75,12 @@ function ExampleRoof() {
           {rows.map(([label, value]) => (
             <tr key={label}>
               <th scope="row">{label}</th>
-              <td>{value || "…"}</td>
+              <td>{value || placeholder}</td>
             </tr>
           ))}
           <tr className="example-total">
             <th scope="row">Listrik per tahun</th>
-            <td>{solar ? `${formatNumber(solar.annualKwh)} kWh` : "…"}</td>
+            <td>{solar ? `${formatNumber(solar.annualKwh)} kWh` : placeholder}</td>
           </tr>
         </tbody>
       </table>
@@ -94,12 +96,15 @@ function ExampleRoof() {
 
 export default function HomePage() {
   const [stats, setStats] = useState(null);
+  const [statsFailed, setStatsFailed] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
     fetchJson("/api/stats", { signal: controller.signal })
       .then(setStats)
-      .catch(() => {});
+      .catch((error) => {
+        if (error.name !== "AbortError") setStatsFailed(true);
+      });
     return () => controller.abort();
   }, []);
 
@@ -118,8 +123,8 @@ export default function HomePage() {
           <p className="overline">Kota dan Kabupaten Bogor</p>
           <h1>Berapa listrik yang bisa dihasilkan atap di Bogor?</h1>
           <p className="lead">
-            SolarRoofGIS memetakan setiap atap bangunan di Kota dan Kabupaten Bogor, lalu memperkirakan berapa
-            panel surya yang muat dan berapa listrik yang dihasilkan sepanjang tahun.
+            SolarRoofGIS memetakan setiap atap bangunan di Kota dan Kabupaten Bogor, lalu memperkirakan berapa panel
+            surya yang muat dan berapa listrik yang dihasilkan sepanjang tahun.
           </p>
           <div className="actions">
             <Link to="/peta" className="button button-primary">
@@ -139,10 +144,13 @@ export default function HomePage() {
           {figures.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
-              <dd className={value ? "" : "skeleton"}>{value || "000"}</dd>
+              <dd className={value || statsFailed ? "" : "skeleton"}>{value || (statsFailed ? "–" : "000")}</dd>
             </div>
           ))}
         </dl>
+        {statsFailed && (
+          <p className="footnote">Statistik belum tersedia. Pastikan data bangunan sudah diimpor ke database.</p>
+        )}
         <div className="table-scroll">
           <table className="data-table">
             <thead>
@@ -172,14 +180,16 @@ export default function HomePage() {
           </table>
         </div>
         <p className="footnote">
-          Bila semua atap yang cukup luas dipasangi panel. Perkiraan kasar dengan asumsi yang sama seperti di peta
-          (atap dianggap persegi untuk jarak tepi); angka per atap di peta memakai bentuk atap sebenarnya.
+          Bila semua atap yang cukup luas dipasangi panel. Perkiraan kasar dengan asumsi yang sama seperti di peta (atap
+          dianggap persegi untuk jarak tepi); angka per atap di peta memakai bentuk atap sebenarnya.
         </p>
       </section>
 
       <section className="page-inner page-section" aria-labelledby="cara-kerja">
         <h2 id="cara-kerja">Cara kerja</h2>
-        <p className="section-lead">Empat langkah yang dijalankan untuk setiap bangunan saat Anda mengkliknya di peta.</p>
+        <p className="section-lead">
+          Empat langkah yang dijalankan untuk setiap bangunan saat Anda mengkliknya di peta.
+        </p>
         <ol className="steps">
           {STEPS.map(({ title, text }) => (
             <li key={title}>

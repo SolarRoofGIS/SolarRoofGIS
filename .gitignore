@@ -15,13 +15,7 @@
 # Copied from node_modules by `npm start` / `npm run build` (see frontend/package.json).
 /frontend/public/maplibre-gl-worker.mjs
 /frontend/.next/
-/frontend/out/
-/frontend/.vercel/
 /backend/node_modules/
-/backend/.env
-/backend/.next/
-/ref/tools/webmap/node_modules/
-/ref/tools/webmap/dist/
 **/.env
 **/.env.*
 !**/.env.example

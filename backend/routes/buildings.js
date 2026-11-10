@@ -1,4 +1,6 @@
 const express = require("express");
+const { errorDetail } = require("../httpErrors");
+const { STUDY_BOUNDS } = require("../studyArea");
 const pool = require("../db");
 const pvout = require("../pvout");
 const { estimateAt } = require("../roofEstimate");
@@ -7,7 +9,6 @@ const solar = require("../solar");
 const router = express.Router();
 const MAX_FEATURES = 2500;
 const MIN_BUILDING_ZOOM = 15.5;
-const STUDY_BOUNDS = [106.401214, -6.788518, 107.227782, -6.302244];
 
 function emptyCollection(message, extra = {}) {
   return {
@@ -100,7 +101,7 @@ router.get("/", async (request, response) => {
     console.error(`Building query failed for ${dataset}:`, error);
     return response.status(500).json({
       error: "Data PostGIS tidak dapat dibaca.",
-      ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+      ...errorDetail(error),
     });
   }
 });
@@ -115,7 +116,9 @@ router.get("/:id", async (request, response) => {
     // Areas are measured in UTM zone 48S (EPSG:32748), which covers all of Bogor.
     const { rows } = await pool.query(
       `WITH building AS (
-         SELECT b.*, ST_Transform(b.geom, 32748) AS geom_utm
+         SELECT b.*,
+                ST_Transform(b.geom, 32748) AS geom_utm,
+                ST_Buffer(ST_Transform(b.geom, 32748), -$2::float8) AS setback
          FROM public.bogor_buildings AS b
          WHERE b.id = $1
        )
@@ -126,7 +129,8 @@ router.get("/:id", async (request, response) => {
               b.full_plus_code,
               ST_AsGeoJSON(b.geom, 7)::json AS geometry,
               ST_Area(b.geom_utm) AS footprint_m2,
-              ST_Area(ST_Buffer(b.geom_utm, -$2::float8)) AS setback_m2,
+              ST_Area(b.setback) AS setback_m2,
+              ST_AsGeoJSON(b.setback, 3)::json AS setback_geometry,
               (SELECT a.wadmkk
                FROM public.batas_bogor AS a
                WHERE ST_Intersects(a.geom, ST_SetSRID(ST_MakePoint(b.longitude, b.latitude), 4326))
@@ -152,6 +156,7 @@ router.get("/:id", async (request, response) => {
       ...(await estimateAt({
         footprintM2: building.footprint_m2,
         setbackM2: building.setback_m2,
+        setbackGeometry: building.setback_geometry,
         longitude: building.longitude,
         latitude: building.latitude,
       })),
@@ -160,7 +165,7 @@ router.get("/:id", async (request, response) => {
     console.error(`Building detail query failed for ${id}:`, error);
     return response.status(500).json({
       error: "Data PostGIS tidak dapat dibaca.",
-      ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+      ...errorDetail(error),
     });
   }
 });

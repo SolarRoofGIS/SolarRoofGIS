@@ -1,4 +1,5 @@
 const express = require("express");
+const { errorDetail } = require("../httpErrors");
 const pool = require("../db");
 
 const router = express.Router();
@@ -31,7 +32,7 @@ router.get("/", async (_request, response) => {
     console.error("Boundary query failed:", error);
     response.status(500).json({
       error: "Batas wilayah tidak dapat dibaca.",
-      ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {}),
+      ...errorDetail(error),
     });
   }
 });
