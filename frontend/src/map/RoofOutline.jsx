@@ -12,14 +12,14 @@ const LABEL_HEIGHT_PX = 11;
 // Rough size of the 13 px bold area label inside the roof.
 const AREA_CHAR_WIDTH_PX = 7.8;
 const AREA_HEIGHT_PX = 15;
+// Up to this many panels the area label looks for a free spot between them; beyond it the
+// search gets slow and a roof that full has no free spot anyway.
+const MAX_PANELS_AVOIDED = 150;
 
-// Polygons as lists of open rings of [x, y] in local metres (x east, y south).
-function toMetres(geometry) {
-  const polygons = polygonsOf(geometry);
-  const perLng = metresPerLng(polygons[0][0][0][1]);
-  return polygons.map((rings) =>
-    rings.map((ring) => openRing(ring).map(([lng, lat]) => [lng * perLng, -lat * METRES_PER_LAT])),
-  );
+// [longitude, latitude] to [x, y] in local metres (x east, y south) around a latitude.
+function localMetres(latitude) {
+  const perLng = metresPerLng(latitude);
+  return ([lng, lat]) => [lng * perLng, -lat * METRES_PER_LAT];
 }
 
 function insideRing([x, y], ring) {
@@ -77,11 +77,12 @@ function distanceToSegment([x, y], [ax, ay], [bx, by]) {
   return Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
 }
 
-// How far a point lies inside the roof: the distance to the nearest side, negative outside it.
-function signedDepth(point, screen, sides) {
-  const inside = screen.some(
-    ([outer, ...holes]) => insideRing(point, outer) && !holes.some((hole) => insideRing(point, hole)),
-  );
+// How far a point lies inside the free part of the roof: the distance to the nearest side,
+// negative outside the roof or on an obstacle.
+function signedDepth(point, screen, obstacles, sides) {
+  const inside =
+    screen.some(([outer, ...holes]) => insideRing(point, outer) && !holes.some((hole) => insideRing(point, hole))) &&
+    !obstacles.some((obstacle) => insideRing(point, obstacle));
   const nearest = Math.min(...sides.map(([a, b]) => distanceToSegment(point, a, b)));
   return inside ? nearest : -nearest;
 }
@@ -89,13 +90,17 @@ function signedDepth(point, screen, sides) {
 // Where a label of this size sits best inside the roof: the spot where its box keeps the most
 // room to the nearest side, checked at the box's corners, edge midpoints and centre. A coarse
 // grid search, then a finer one around the best cell. Works for L shapes, courtyards and roofs
-// in several parts; a roof too narrow for the text gets the least bad spot.
-function labelPoint(screen, bounds, [width, height]) {
-  const sides = screen.flat().flatMap((ring) => ring.map((corner, v) => [corner, ring[(v + 1) % ring.length]]));
+// in several parts; a roof too narrow for the text gets the least bad spot. `obstacles` are
+// rings the label should stay off, such as the panels. Returns { point, room }, room being
+// negative where the label cannot fit without touching a side; point is null if none is inside.
+function labelPoint(screen, bounds, [width, height], obstacles = []) {
+  const sides = [...screen.flat(), ...obstacles].flatMap((ring) =>
+    ring.map((corner, v) => [corner, ring[(v + 1) % ring.length]]),
+  );
   const offsets = [-0.5, 0, 0.5].flatMap((fx) => [-0.5, 0, 0.5].map((fy) => [fx * width, fy * height]));
   const room = ([x, y]) => {
-    if (signedDepth([x, y], screen, sides) <= 0) return -Infinity;
-    return Math.min(...offsets.map(([dx, dy]) => signedDepth([x + dx, y + dy], screen, sides)));
+    if (signedDepth([x, y], screen, obstacles, sides) <= 0) return -Infinity;
+    return Math.min(...offsets.map(([dx, dy]) => signedDepth([x + dx, y + dy], screen, obstacles, sides)));
   };
   const search = ([left, top, right, bottom], steps) => {
     let best = { point: null, room: -Infinity };
@@ -110,11 +115,11 @@ function labelPoint(screen, bounds, [width, height]) {
   };
   const [left, top, right, bottom] = bounds;
   const coarse = search(bounds, 24);
-  if (!coarse.point) return null;
+  if (!coarse.point) return coarse;
   const [cellX, cellY] = [(right - left) / 24, (bottom - top) / 24];
   const [x, y] = coarse.point;
   const fine = search([x - cellX, y - cellY, x + cellX, y + cellY], 8);
-  return fine.room > coarse.room ? fine.point : coarse.point;
+  return fine.room > coarse.room ? fine : coarse;
 }
 
 // Longer sides are labelled first; a label that would overlap one already placed is left out.
@@ -127,12 +132,15 @@ function placeLabels(candidates, reserved = []) {
 }
 
 // A roof outline scaled into the drawing, optionally with the length of every side, the roof
-// area written inside it, or a 10 m scale bar.
-function RoofOutline({ geometry, color, sideLengths = false, areaM2, scaleBar = false, label }) {
+// area written inside it, the solar panels laid out on it (closed rings of [longitude,
+// latitude]) or a 10 m scale bar.
+function RoofOutline({ geometry, color, sideLengths = false, areaM2, panels = [], scaleBar = false, label }) {
   const size = { width: 280, height: 200 };
   const margin = sideLengths ? { x: 46, y: 22 } : { x: 18, y: 18 };
   const barSpace = scaleBar ? 16 : 0;
-  const polygons = toMetres(geometry);
+  const rawPolygons = polygonsOf(geometry);
+  const toLocal = localMetres(rawPolygons[0][0][0][1]);
+  const polygons = rawPolygons.map((rings) => rings.map((ring) => openRing(ring).map(toLocal)));
   const corners = polygons.flat(2);
   const xs = corners.map(([x]) => x);
   const ys = corners.map(([, y]) => y);
@@ -151,13 +159,21 @@ function RoofOutline({ geometry, color, sideLengths = false, areaM2, scaleBar = 
     .flat()
     .map((ring) => `M${ring.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L")}Z`)
     .join(" ");
+  const screenPanels = panels.map((ring) => openRing(ring).map((point) => project(toLocal(point))));
+  const panelPath = screenPanels
+    .map((ring) => `M${ring.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L")}Z`)
+    .join(" ");
 
   let area = null;
   if (Number.isFinite(areaM2)) {
     const text = `${formatNumber(areaM2)} m²`;
     const width = text.length * AREA_CHAR_WIDTH_PX;
     const [left, top] = project([minX, minY]);
-    const point = labelPoint(screen, [left, top, left + spanX * scale, top + spanY * scale], [width, AREA_HEIGHT_PX]);
+    const bounds = [left, top, left + spanX * scale, top + spanY * scale];
+    const labelSize = [width, AREA_HEIGHT_PX];
+    // Off the panels if it fits between them, otherwise on top with its halo.
+    const free = screenPanels.length <= MAX_PANELS_AVOIDED ? labelPoint(screen, bounds, labelSize, screenPanels) : null;
+    const { point } = free?.room > 0 ? free : labelPoint(screen, bounds, labelSize);
     if (point) {
       const box = {
         left: point[0] - width / 2,
@@ -191,6 +207,7 @@ function RoofOutline({ geometry, color, sideLengths = false, areaM2, scaleBar = 
   return (
     <svg className="roof-outline" viewBox={`0 0 ${size.width} ${size.height}`} role="img" aria-label={label}>
       <path d={path} fill={color} fillRule="evenodd" stroke="#1c2421" strokeWidth="1.2" strokeLinejoin="round" />
+      {panelPath && <path className="roof-panels" d={panelPath} />}
       {labels.map((side, index) => (
         <text
           key={index}

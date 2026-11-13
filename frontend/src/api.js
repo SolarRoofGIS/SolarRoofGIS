@@ -9,17 +9,19 @@ export async function fetchJson(path, options) {
   return result;
 }
 
-// Building details only change if the assumptions on the server change, so one fetch per session is enough.
+// Building details only change if the assumptions on the server change, so one fetch per
+// building and panel size per session is enough.
 const detailCache = {};
 
-export function fetchBuildingDetail(id) {
-  if (!detailCache[id]) {
-    detailCache[id] = fetchJson(`/api/buildings/${id}`).catch((error) => {
-      delete detailCache[id];
+export function fetchBuildingDetail(id, panelId) {
+  const key = `${id}:${panelId}`;
+  if (!detailCache[key]) {
+    detailCache[key] = fetchJson(`/api/buildings/${id}?panel=${encodeURIComponent(panelId)}`).catch((error) => {
+      delete detailCache[key];
       throw error;
     });
   }
-  return detailCache[id];
+  return detailCache[key];
 }
 
 function postJson(path, body, options) {
@@ -37,6 +39,6 @@ export function fetchFinanceEstimate(input, options) {
 }
 
 // The same estimate as a building's, for a roof outline drawn on the map (GeoJSON geometry).
-export function fetchRoofEstimate(geometry, options) {
-  return postJson("/api/roofs/estimate", { geometry }, options);
+export function fetchRoofEstimate(geometry, panelId, options) {
+  return postJson("/api/roofs/estimate", { geometry, panel: panelId }, options);
 }

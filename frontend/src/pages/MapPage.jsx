@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchBuildingDetail, fetchJson, fetchRoofEstimate } from "../api";
+import { chosenPanelCount, panelRings } from "../map/geometry";
 import SolarMap from "../map/SolarMap";
 import Sidebar from "../sidebar/Sidebar";
 import "./MapPage.css";
@@ -18,6 +19,8 @@ const CUSTOM_ROOFS_KEY = "solarroofgis.custom-roofs";
 const MAX_DRAWN_ROOFS = 2;
 // Wait this long after the last change to a drawn roof before asking for a new estimate.
 const ESTIMATE_DELAY_MS = 250;
+// The panel size the estimate starts with, the same default as the server's.
+const DEFAULT_PANEL_ID = "550";
 
 function loadCustomRoofs() {
   try {
@@ -58,6 +61,10 @@ export default function MapPage() {
   const [selectedCustomId, setSelectedCustomId] = useState(null);
   const [customEstimates, setCustomEstimates] = useState({});
   const [tool, setTool] = useState("off");
+  // The panel size every estimate uses, and how many panels the viewer wants on the selected
+  // roof: null for as many as fit, otherwise what they typed.
+  const [panelId, setPanelId] = useState(DEFAULT_PANEL_ID);
+  const [panelChoice, setPanelChoice] = useState(null);
   const customEstimatesRef = useRef(customEstimates);
   customEstimatesRef.current = customEstimates;
   const phone = useMediaQuery(PHONE_LAYOUT);
@@ -92,15 +99,20 @@ export default function MapPage() {
       return undefined;
     }
 
+    // A new panel size keeps the current roof on screen while it is recalculated.
     let active = true;
-    setSelection({ status: "loading" });
-    fetchBuildingDetail(selectedId)
+    setSelection((current) =>
+      current.status === "ready" && current.detail.building.id === selectedId
+        ? { ...current, refreshing: true }
+        : { status: "loading" },
+    );
+    fetchBuildingDetail(selectedId, panelId)
       .then((detail) => active && setSelection({ status: "ready", detail }))
       .catch((error) => active && setSelection({ status: "error", message: error.message }));
     return () => {
       active = false;
     };
-  }, [selectedId]);
+  }, [selectedId, panelId]);
 
   useEffect(() => {
     try {
@@ -112,49 +124,68 @@ export default function MapPage() {
   }, [customRoofs]);
 
   // Only the selected drawn roof is estimated. Its previous figures stay on screen while a
-  // reshaped outline is recalculated, and switching back to an unchanged roof reuses them.
+  // reshaped outline or a new panel size is recalculated, and switching back to an unchanged
+  // roof reuses them.
   const selectedCustom = customRoofs.find((roof) => roof.id === selectedCustomId) || null;
   const selectedCustomGeometry = selectedCustom?.geometry || null;
   useEffect(() => {
     if (!selectedCustomId || !selectedCustomGeometry) return undefined;
     const [id, geometry] = [selectedCustomId, selectedCustomGeometry];
     const cached = customEstimatesRef.current[id];
-    if (cached?.status === "ready" && cached.geometry === geometry) return undefined;
+    if (cached?.status === "ready" && cached.geometry === geometry && cached.panelId === panelId) return undefined;
 
     const controller = new AbortController();
     const store = (estimate) => setCustomEstimates((all) => ({ ...all, [id]: estimate }));
     store(cached?.status === "ready" ? { ...cached, refreshing: true } : { status: "loading" });
     const timer = setTimeout(() => {
-      fetchRoofEstimate(geometry, { signal: controller.signal })
-        .then((detail) => store({ status: "ready", detail, geometry }))
+      fetchRoofEstimate(geometry, panelId, { signal: controller.signal })
+        .then((detail) => store({ status: "ready", detail, geometry, panelId }))
         .catch((error) => {
-          if (error.name !== "AbortError") store({ status: "error", message: error.message, geometry });
+          if (error.name !== "AbortError") store({ status: "error", message: error.message, geometry, panelId });
         });
     }, ESTIMATE_DELAY_MS);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [selectedCustomId, selectedCustomGeometry]);
+  }, [selectedCustomId, selectedCustomGeometry, panelId]);
+
+  // The panels to draw on the selected roof, on the map and in the panel: as many as the viewer chose.
+  const customEstimate = selectedCustom ? customEstimates[selectedCustom.id] : null;
+  let activeDetail = null;
+  if (customEstimate?.status === "ready") activeDetail = customEstimate.detail;
+  else if (!selectedCustom && selection.status === "ready") activeDetail = selection.detail;
+  const shownPanels = activeDetail
+    ? chosenPanelCount(panelChoice, activeDetail.solar.panelCount, activeDetail.assumptions.minPanels)
+    : 0;
+  const panelRingList = useMemo(
+    () =>
+      activeDetail ? panelRings(activeDetail.solar.layout.panels.slice(0, shownPanels), activeDetail.solar.panel) : [],
+    [activeDetail, shownPanels],
+  );
 
   const addCustomRoof = (roof) => {
+    setPanelChoice(null);
     setCustomRoofs((roofs) => [...roofs, roof].slice(-MAX_DRAWN_ROOFS));
     setSelectedId(null);
     setSelectedCustomId(roof.id);
     setPanelCollapsed(false);
   };
   const selectBuilding = (id) => {
+    if (id !== selectedId) setPanelChoice(null);
     setSelectedCustomId(null);
     setSelectedId(id);
     setPanelCollapsed(false);
   };
   const selectCustom = (id) => {
+    if (id !== selectedCustomId) setPanelChoice(null);
     setSelectedId(null);
     setSelectedCustomId(id);
     setTool("off");
     setPanelCollapsed(false);
   };
   const clearSelection = () => {
+    setPanelChoice(null);
     setSelectedId(null);
     setSelectedCustomId(null);
     setTool("off");
@@ -221,6 +252,7 @@ export default function MapPage() {
         onEditChange={changeCustom}
         onEditDone={stopTool}
         onSelectCustom={selectCustom}
+        panels={panelRingList}
       />
       <Sidebar
         selection={selection}
@@ -228,7 +260,7 @@ export default function MapPage() {
           selectedCustom
             ? {
                 roof: selectedCustom,
-                estimate: customEstimates[selectedCustom.id] || { status: "loading" },
+                estimate: customEstimate || { status: "loading" },
                 editing: tool === "edit",
               }
             : null
@@ -244,6 +276,12 @@ export default function MapPage() {
         onDoneEditing={stopTool}
         onDeleteCustom={deleteCustom}
         onReshapeBuilding={reshapeBuilding}
+        panelPlan={{
+          rings: panelRingList,
+          onPanelIdChange: setPanelId,
+          choice: panelChoice,
+          onChoiceChange: setPanelChoice,
+        }}
       />
     </main>
   );

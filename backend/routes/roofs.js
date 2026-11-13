@@ -56,6 +56,8 @@ router.post("/estimate", async (request, response) => {
   const geometry = request.body?.geometry;
   const error = geometryError(geometry);
   if (error) return response.status(400).json({ error });
+  const panel = solar.panelById(request.body?.panel);
+  if (!panel) return response.status(400).json({ error: "Ukuran panel tidak dikenal." });
 
   try {
     // The boundary table is optional, so someone without the imported data can still try
@@ -128,6 +130,7 @@ router.post("/estimate", async (request, response) => {
         setbackGeometry: roof.setback_geometry,
         longitude: roof.longitude,
         latitude: roof.latitude,
+        panel,
       })),
     });
   } catch (queryError) {

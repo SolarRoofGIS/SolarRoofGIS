@@ -4,6 +4,15 @@
   height: 100%;
 }
 
+/* Solar panels: dark cells with a light frame, like modules seen from above. */
+.roof-panels {
+  fill: #1f3b5c;
+  fill-opacity: 0.88;
+  stroke: #dbe6f0;
+  stroke-width: 0.6px;
+  stroke-linejoin: round;
+}
+
 /* A white halo keeps the lengths readable where they cross the grid or a neighbouring side. */
 .roof-side-label {
   fill: var(--ink);

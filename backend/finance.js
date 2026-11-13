@@ -1,6 +1,4 @@
-const { ASSUMPTIONS, PANEL_AREA_M2, round } = require("./solar");
-
-const MODULE_EFFICIENCY = ASSUMPTIONS.panel.powerWp / (PANEL_AREA_M2 * 1000);
+const { ASSUMPTIONS, DEFAULT_PANEL, round } = require("./solar");
 
 // Planning-level financial assumptions, adjust here; the API and the panel follow.
 const FINANCE = {
@@ -11,21 +9,23 @@ const FINANCE = {
   defaultMonthlyBillRp: 1500000,
   // The usual performance warranty of a panel, and the length of the cost projection.
   projectionYears: 25,
-  // Same module area and count on the roof; a less efficient cell gives fewer kWp.
+  // Same module size and count on the roof; a less efficient cell gives fewer kWp. A
+  // monocrystalline module has the efficiency of the chosen panel size.
   panelTypes: [
-    { id: "mono", label: "Monokristalin", efficiency: MODULE_EFFICIENCY },
+    { id: "mono", label: "Monokristalin", efficiency: null },
     { id: "poly", label: "Polikristalin", efficiency: 0.15 },
   ],
 };
 
-// Cost, bill savings and payback of a system of `panelCount` modules. `monthlyBillRp` may be
-// null when the viewer has not entered a bill.
+// Cost, bill savings and payback of a system of `panelCount` modules of the given size (from
+// solar.PANELS). `monthlyBillRp` may be null when the viewer has not entered a bill.
 //
 // Since Permen ESDM 2/2024 power sent to the grid no longer reduces the bill, so the savings
 // can never exceed the bill itself.
-function estimateFinance({ panelCount, pvout, monthlyBillRp, panelType = "mono" }) {
+function estimateFinance({ panelCount, pvout, monthlyBillRp, panelType = "mono", panel = DEFAULT_PANEL }) {
   const type = FINANCE.panelTypes.find((candidate) => candidate.id === panelType);
-  const typeCapacityKwp = ((panelCount * ASSUMPTIONS.panel.powerWp) / 1000) * (type.efficiency / MODULE_EFFICIENCY);
+  const efficiency = type.efficiency ?? panel.efficiency;
+  const typeCapacityKwp = ((panelCount * panel.powerWp) / 1000) * (efficiency / panel.efficiency);
   const annualKwh = typeCapacityKwp * pvout;
   const investmentRp = typeCapacityKwp * FINANCE.costRpPerKwp;
   const monthlyProductionRp = (annualKwh / 12) * ASSUMPTIONS.tariffRpPerKwh;

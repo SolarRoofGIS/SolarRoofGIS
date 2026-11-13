@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchFinanceEstimate } from "../api";
 import { formatNumber, formatRupiah } from "../format";
+import { chosenPanelCount } from "../map/geometry";
 import SectionTitle from "./SectionTitle";
 
 const ESTIMATE_DELAY_MS = 250;
@@ -204,23 +205,20 @@ function FinanceResults({ finance, assumptions }) {
   );
 }
 
-// Investment, savings and payback from the backend, recalculated as the inputs change.
-export default function FinanceSection({ solar, assumptions }) {
+// Investment, savings and payback from the backend, recalculated as the inputs change. The
+// panel count is kept by the map page, since the roof drawing and the map show it too.
+export default function FinanceSection({ solar, assumptions, panelChoice, onPanelChoiceChange }) {
   const options = assumptions.finance;
   const [bill, setBill] = useState(String(options.defaultMonthlyBillRp));
   const [panelType, setPanelType] = useState(options.panelTypes[0].id);
   const [estimate, setEstimate] = useState({ status: "loading" });
-  const { pvout } = solar;
+  const { pvout, panel } = solar;
   const maxPanels = solar.panelCount;
-  // What the viewer typed; null means the most this roof holds, and a new roof starts there.
-  const [panels, setPanels] = useState(null);
-  const [roofMax, setRoofMax] = useState(maxPanels);
-  if (roofMax !== maxPanels) {
-    setRoofMax(maxPanels);
-    setPanels(null);
-  }
-  const panelsShown = panels ?? String(maxPanels);
-  const panelCount = panelsShown === "" ? maxPanels : Math.max(Number(panelsShown), assumptions.minPanels);
+  const panelCount = chosenPanelCount(panelChoice, maxPanels, assumptions.minPanels);
+  const panelEfficiency = assumptions.panels.find((size) => size.id === panel.id).efficiency;
+  let panelsShown = String(maxPanels);
+  if (panelChoice === "") panelsShown = "";
+  else if (panelChoice !== null) panelsShown = String(Math.min(Number(panelChoice), maxPanels));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -231,6 +229,7 @@ export default function FinanceSection({ solar, assumptions }) {
           pvout,
           monthlyBillRp: bill === "" ? null : Number(bill),
           panelType,
+          panel: panel.id,
         },
         { signal: controller.signal },
       )
@@ -243,7 +242,7 @@ export default function FinanceSection({ solar, assumptions }) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [panelCount, pvout, bill, panelType]);
+  }, [panelCount, pvout, bill, panelType, panel.id]);
 
   return (
     <section className="sidebar-section">
@@ -268,7 +267,7 @@ export default function FinanceSection({ solar, assumptions }) {
           <select value={panelType} onChange={(event) => setPanelType(event.target.value)}>
             {options.panelTypes.map((type) => (
               <option key={type.id} value={type.id}>
-                {type.label} (efisiensi {formatNumber(type.efficiency * 100)}%)
+                {type.label} (efisiensi {formatNumber((type.efficiency ?? panelEfficiency) * 100, 1)}%)
               </option>
             ))}
           </select>
@@ -284,11 +283,11 @@ export default function FinanceSection({ solar, assumptions }) {
             value={panelsShown}
             onChange={(event) => {
               const digits = event.target.value.replace(/\D/g, "");
-              setPanels(digits === "" ? "" : String(Math.min(Number(digits), maxPanels)));
+              onPanelChoiceChange(digits === "" ? "" : String(Math.min(Number(digits), maxPanels)));
             }}
             onBlur={() => {
-              if (panels === "") setPanels(null);
-              else if (panels !== null) setPanels(String(panelCount));
+              if (panelChoice === "") onPanelChoiceChange(null);
+              else if (panelChoice !== null) onPanelChoiceChange(String(panelCount));
             }}
           />
         </label>

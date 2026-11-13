@@ -73,6 +73,10 @@ function FlowStep({ label, value, note, children, final }) {
   );
 }
 
+function panelDescription(panel) {
+  return `${panel.powerWp} Wp, ${formatNumber(panel.widthM, 2)} × ${formatNumber(panel.lengthM, 2)} m`;
+}
+
 function RoofToEnergy({ solar, assumptions }) {
   return (
     <section className="sidebar-section">
@@ -90,7 +94,7 @@ function RoofToEnergy({ solar, assumptions }) {
         <FlowStep
           label="Jumlah panel surya"
           value={`${formatNumber(solar.panelCount)} panel`}
-          note={`Panel ${assumptions.panel.powerWp} Wp, ${formatNumber(assumptions.panel.widthM, 2)} × ${formatNumber(assumptions.panel.lengthM, 2)} m. Total ${formatNumber(solar.capacityKwp, 1)} kWp × ${formatNumber(solar.pvout)} kWh per kWp di lokasi ini.${solar.limitedByLayout ? " Jumlahnya dibatasi bentuk atap, karena panel utuh harus muat tersusun." : ""}`}
+          note={`Panel ${panelDescription(solar.panel)}. Total ${formatNumber(solar.capacityKwp, 1)} kWp × ${formatNumber(solar.pvout)} kWh per kWp di lokasi ini.${solar.limitedByLayout ? " Jumlahnya dibatasi bentuk atap, karena panel utuh harus muat tersusun." : ""}`}
           final
         />
       </ol>
@@ -237,7 +241,8 @@ function BuildingDetails({ building }) {
   );
 }
 
-function Method({ assumptions }) {
+function Method({ solar, assumptions }) {
+  const panel = assumptions.panels.find((size) => size.id === solar.panel.id);
   return (
     <details className="sidebar-details">
       <summary>
@@ -251,9 +256,9 @@ function Method({ assumptions }) {
           (memperhitungkan kemiringan, tandon, bayangan, dan jalur perawatan).
         </li>
         <li>
-          Luas itu dibagi luas satu panel ({formatNumber(assumptions.panelAreaM2, 2)} m², {assumptions.panel.powerWp}{" "}
-          Wp) dan dibulatkan ke bawah, lalu dicek apakah panel sebanyak itu benar-benar muat tersusun dalam baris pada
-          bentuk atapnya. Atap yang muat kurang dari {assumptions.minPanels} panel dianggap tidak layak.
+          Luas itu dibagi luas satu panel ({formatNumber(panel.areaM2, 2)} m², {panel.powerWp} Wp) dan dibulatkan ke
+          bawah, lalu dicek apakah panel sebanyak itu benar-benar muat tersusun dalam baris pada bentuk atapnya. Atap
+          yang muat kurang dari {assumptions.minPanels} panel dianggap tidak layak.
         </li>
         <li>
           Listrik per tahun = kapasitas (kWp) × PVOUT dari Global Solar Atlas, yang sudah memperhitungkan rugi-rugi
@@ -291,8 +296,35 @@ function unsuitableReason(solar, { minPanels }) {
   };
 }
 
-// The roof's shape with the length of every side, then the estimate per year, month and day.
-function Hero({ solar, assumptions, geometry }) {
+// The panel sizes to choose from; the whole estimate is recalculated for the chosen one.
+function PanelSizePicker({ assumptions, panelId, onChange }) {
+  return (
+    <fieldset className="panel-size">
+      <legend>Ukuran panel</legend>
+      <div className="panel-size-options">
+        {assumptions.panels.map((panel) => (
+          <label key={panel.id} className={panel.id === panelId ? "is-active" : undefined}>
+            <input
+              type="radio"
+              name="panel-size"
+              value={panel.id}
+              checked={panel.id === panelId}
+              onChange={() => onChange(panel.id)}
+            />
+            <strong>{panel.powerWp} Wp</strong>
+            <span>
+              {formatNumber(panel.widthM, 2)} × {formatNumber(panel.lengthM, 2)} m
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+// The roof's shape with the length of every side and the panels on it, then the estimate per
+// year, month and day.
+function Hero({ solar, assumptions, geometry, panelPlan }) {
   const reason = solar.suitable ? null : unsuitableReason(solar, assumptions);
   return (
     <div className={`hero${solar.suitable ? "" : " hero-unsuitable"}`}>
@@ -302,9 +334,11 @@ function Hero({ solar, assumptions, geometry }) {
           color={pvoutCss(solar.pvout, solar.pvoutRange)}
           sideLengths
           areaM2={solar.footprintM2}
-          label={`Bentuk atap seluas ${formatNumber(solar.footprintM2)} m² dengan panjang setiap sisi dalam meter`}
+          panels={panelPlan.rings}
+          label={`Bentuk atap seluas ${formatNumber(solar.footprintM2)} m² dengan panjang setiap sisi dalam meter${panelPlan.rings.length ? ` dan ${formatNumber(panelPlan.rings.length)} panel surya` : ""}`}
         />
       </figure>
+      <PanelSizePicker assumptions={assumptions} panelId={solar.panel.id} onChange={panelPlan.onPanelIdChange} />
       <span className="hero-label">Perkiraan</span>
       {solar.suitable ? (
         <>
@@ -332,36 +366,43 @@ function Hero({ solar, assumptions, geometry }) {
 }
 
 // Everything below the headline figure, the same for a database roof and a drawn one.
-function EstimateSections({ solar, assumptions }) {
+function EstimateSections({ solar, assumptions, panelPlan }) {
   return (
     <>
       {solar.suitable && <RoofToEnergy solar={solar} assumptions={assumptions} />}
       <Sunlight solar={solar} />
       {solar.suitable && <MonthlyChart monthlyKwh={solar.monthlyKwh} />}
       {solar.suitable && <Benefits solar={solar} assumptions={assumptions} />}
-      {solar.suitable && <FinanceSection solar={solar} assumptions={assumptions} />}
+      {solar.suitable && (
+        <FinanceSection
+          solar={solar}
+          assumptions={assumptions}
+          panelChoice={panelPlan.choice}
+          onPanelChoiceChange={panelPlan.onChoiceChange}
+        />
+      )}
     </>
   );
 }
 
-function BuildingInfo({ detail, onReshape }) {
+function BuildingInfo({ detail, refreshing, onReshape, panelPlan }) {
   const { building, solar, assumptions } = detail;
 
   return (
-    <>
-      <Hero solar={solar} assumptions={assumptions} geometry={building.geometry} />
+    <div className={refreshing ? "is-refreshing" : undefined}>
+      <Hero solar={solar} assumptions={assumptions} geometry={building.geometry} panelPlan={panelPlan} />
       <p className="reshape-hint">
         Bentuk dari citra satelit tidak pas?{" "}
         <button type="button" className="text-button" onClick={() => onReshape(detail)}>
           Ubah bentuknya
         </button>
       </p>
-      <EstimateSections solar={solar} assumptions={assumptions} />
+      <EstimateSections solar={solar} assumptions={assumptions} panelPlan={panelPlan} />
       <div className="sidebar-details-group">
         <BuildingDetails building={building} />
-        <Method assumptions={assumptions} />
+        <Method solar={solar} assumptions={assumptions} />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -378,6 +419,8 @@ function downloadGeoJSON(customRoof, detail) {
       wilayah: regionName(roof.region, roof.regionChecked),
       luas_atap_m2: solar.footprintM2,
       luas_bisa_dipasangi_m2: solar.usableM2,
+      panel_wp: solar.panel.powerWp,
+      ukuran_panel_m: [solar.panel.widthM, solar.panel.lengthM],
       jumlah_panel: solar.panelCount,
       kapasitas_kwp: solar.capacityKwp,
       pvout_kwh_per_kwp: solar.pvout,
@@ -436,7 +479,7 @@ function CustomDetails({ customRoof, detail }) {
   );
 }
 
-function CustomRoofInfo({ custom, customRoofs, onEdit, onDoneEditing, onDelete, onSelectCustom }) {
+function CustomRoofInfo({ custom, customRoofs, onEdit, onDoneEditing, onDelete, onSelectCustom, panelPlan }) {
   const { roof: customRoof, estimate, editing } = custom;
   const detail = estimate.status === "ready" ? estimate.detail : null;
   const others = customRoofs.filter((roof) => roof.id !== customRoof.id);
@@ -497,11 +540,16 @@ function CustomRoofInfo({ custom, customRoofs, onEdit, onDoneEditing, onDelete, 
               Garis atap saling berpotongan, jadi luasnya dihitung dari bentuk yang sudah dirapikan.
             </p>
           )}
-          <Hero solar={detail.solar} assumptions={detail.assumptions} geometry={customRoof.geometry} />
-          <EstimateSections solar={detail.solar} assumptions={detail.assumptions} />
+          <Hero
+            solar={detail.solar}
+            assumptions={detail.assumptions}
+            geometry={customRoof.geometry}
+            panelPlan={panelPlan}
+          />
+          <EstimateSections solar={detail.solar} assumptions={detail.assumptions} panelPlan={panelPlan} />
           <div className="sidebar-details-group">
             <CustomDetails customRoof={customRoof} detail={detail} />
-            <Method assumptions={detail.assumptions} />
+            <Method solar={detail.solar} assumptions={detail.assumptions} />
           </div>
         </div>
       )}
@@ -523,6 +571,7 @@ export default function Sidebar({
   onDoneEditing,
   onDeleteCustom,
   onReshapeBuilding,
+  panelPlan,
 }) {
   const selected = Boolean(custom) || selection.status !== "idle";
   let title = "Potensi listrik surya atap";
@@ -577,6 +626,7 @@ export default function Sidebar({
               onDoneEditing={onDoneEditing}
               onDelete={onDeleteCustom}
               onSelectCustom={onSelectCustom}
+              panelPlan={panelPlan}
             />
           ) : (
             <>
@@ -596,7 +646,14 @@ export default function Sidebar({
               {selection.status === "error" && (
                 <p className="sidebar-error">Data atap tidak dapat dimuat: {selection.message}</p>
               )}
-              {selection.status === "ready" && <BuildingInfo detail={selection.detail} onReshape={onReshapeBuilding} />}
+              {selection.status === "ready" && (
+                <BuildingInfo
+                  detail={selection.detail}
+                  refreshing={selection.refreshing}
+                  onReshape={onReshapeBuilding}
+                  panelPlan={panelPlan}
+                />
+              )}
             </>
           )}
         </div>

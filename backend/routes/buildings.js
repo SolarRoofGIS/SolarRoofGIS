@@ -111,6 +111,8 @@ router.get("/:id", async (request, response) => {
   if (!Number.isInteger(id) || id <= 0) {
     return response.status(400).json({ error: "ID bangunan tidak valid." });
   }
+  const panel = solar.panelById(request.query.panel);
+  if (!panel) return response.status(400).json({ error: "Ukuran panel tidak dikenal." });
 
   try {
     // Areas are measured in UTM zone 48S (EPSG:32748), which covers all of Bogor.
@@ -159,6 +161,7 @@ router.get("/:id", async (request, response) => {
         setbackGeometry: building.setback_geometry,
         longitude: building.longitude,
         latitude: building.latitude,
+        panel,
       })),
     });
   } catch (error) {

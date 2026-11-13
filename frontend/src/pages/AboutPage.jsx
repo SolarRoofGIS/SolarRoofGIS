@@ -52,9 +52,14 @@ const LIMITATIONS = [
 
 const STACK = ["React", "MapLibre GL", "Express.js", "PostgreSQL + PostGIS", "Vector tiles (MVT)", "geotiff.js"];
 
+function panelSize(panel) {
+  return `${formatNumber(panel.widthM, 2)} × ${formatNumber(panel.lengthM, 2)} m`;
+}
+
 function MethodSteps({ assumptions }) {
   const a = assumptions;
   const value = (text) => (a ? text : "…");
+  const defaultPanel = a?.panels.find((panel) => panel.id === a.defaultPanel);
 
   return (
     <ol className="method-steps">
@@ -75,12 +80,11 @@ function MethodSteps({ assumptions }) {
       <li>
         <h3>Jumlah panel</h3>
         <p>
-          Area itu dibagi luas satu panel{" "}
-          {value(
-            `${a?.panel.powerWp} Wp (${formatNumber(a?.panel.widthM, 3)} × ${formatNumber(a?.panel.lengthM, 3)} m ≈ ${formatNumber(a?.panelAreaM2, 2)} m²)`,
-          )}{" "}
-          dan dibulatkan ke bawah, lalu dicek apakah panel sebanyak itu benar-benar muat tersusun dalam baris pada
-          bentuk atapnya. Atap yang muat kurang dari {value(a?.minPanels)} panel dianggap tidak layak.
+          Area itu dibagi luas satu panel dan dibulatkan ke bawah, lalu dicek apakah panel sebanyak itu benar-benar muat
+          tersusun dalam baris pada bentuk atapnya. Atap yang muat kurang dari {value(a?.minPanels)} panel dianggap
+          tidak layak. Ukuran panel bisa dipilih di peta:{" "}
+          {value(a?.panels.map((panel) => `${panel.powerWp} Wp (${panelSize(panel)})`).join(", "))}. Warna peta dan
+          ringkasan wilayah memakai panel {value(`${defaultPanel?.powerWp} Wp`)}.
         </p>
       </li>
       <li>
@@ -90,9 +94,7 @@ function MethodSteps({ assumptions }) {
           kabel, debu, dan suhu, jadi tidak ada pengurangan tambahan. Produksi per bulan memakai 12 lapisan PVOUT
           bulanan.
         </p>
-        <p className="formula">
-          kWh/tahun = jumlah panel × {value(formatNumber(a?.panel.powerWp / 1000, 2))} kWp × PVOUT
-        </p>
+        <p className="formula">kWh/tahun = jumlah panel × kWp per panel × PVOUT</p>
       </li>
     </ol>
   );
@@ -122,7 +124,7 @@ export default function AboutPage() {
   const assumptions = [
     ["Jarak bebas tepi", a && `${formatNumber(a.setbackM, 1)} m`],
     ["Faktor area terpakai", a && `${formatNumber(a.packingFactor * 100)}%`],
-    ["Panel", a && `${a.panel.powerWp} Wp, ${formatNumber(a.panelAreaM2, 2)} m²`],
+    ["Ukuran panel", a && a.panels.map((panel) => `${panel.powerWp} Wp`).join(", ")],
     ["Minimal panel per atap", a && a.minPanels],
     ["Tarif listrik PLN", a && `Rp${formatNumber(a.tariffRpPerKwh, 2)}/kWh`],
     ["Biaya investasi PLTS", a && `Rp${formatNumber(a.finance.costRpPerKwp)}/kWp`],

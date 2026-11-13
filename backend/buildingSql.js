@@ -1,9 +1,10 @@
 const pvout = require("./pvout");
-const { ASSUMPTIONS, PANEL_AREA_M2 } = require("./solar");
+const { ASSUMPTIONS, DEFAULT_PANEL } = require("./solar");
 
 // SQL pieces shared by the vector tiles and the summary statistics. Both run over
 // millions of buildings, so they avoid per-building geometry work: PVOUT comes from a
-// plain array lookup into the raster grid, and the panel count from the footprint area.
+// plain array lookup into the raster grid, and the panel count from the footprint area,
+// always with the default panel size.
 
 const NO_DATA = -1;
 
@@ -39,10 +40,10 @@ function pvoutSql(alias, first) {
 // long or irregular roofs; good enough for area totals.
 function panelCountSql(areaSql) {
   const { setbackM, packingFactor, minPanels } = ASSUMPTIONS;
-  const panels = `floor(${packingFactor} * power(greatest(sqrt(${areaSql}) - ${2 * setbackM}, 0), 2) / ${PANEL_AREA_M2})`;
+  const panels = `floor(${packingFactor} * power(greatest(sqrt(${areaSql}) - ${2 * setbackM}, 0), 2) / ${DEFAULT_PANEL.areaM2})`;
   return `(CASE WHEN ${panels} >= ${minPanels} THEN ${panels} ELSE 0 END)`;
 }
 
-const PANEL_KWP = ASSUMPTIONS.panel.powerWp / 1000;
+const PANEL_KWP = DEFAULT_PANEL.powerWp / 1000;
 
 module.exports = { pvoutGridParams, pvoutSql, panelCountSql, PANEL_KWP };

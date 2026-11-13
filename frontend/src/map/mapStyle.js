@@ -11,6 +11,8 @@ export const STUDY_BOUNDS = [
 export const ROOF_ZOOM = 15;
 // Roofs the viewer drew or reshaped, kept apart from the PVOUT colors of the data.
 const DRAWN_COLOR = "#1f4a3f";
+// A panel is about a metre wide; further out the layout is a dark smudge.
+const PANEL_MIN_ZOOM = 16.5;
 
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const BUILDINGS_ATTRIBUTION = "Bangunan &copy; Google Open Buildings · PVOUT &copy; Global Solar Atlas";
@@ -92,6 +94,8 @@ export function mapStyle() {
       // The roof outline the viewer drew, and the outline being drawn or reshaped right now.
       custom: { type: "geojson", data: EMPTY_DATA },
       draft: { type: "geojson", data: EMPTY_DATA },
+      // The solar panels laid out on the selected roof.
+      panels: { type: "geojson", data: EMPTY_DATA },
     },
     layers: [
       { id: "background", type: "background", paint: { "background-color": "#e4ebe8" } },
@@ -217,6 +221,20 @@ export function mapStyle() {
           "line-width": ["case", ["get", "selected"], 2.6, 1.8],
           "line-dasharray": [2, 1],
         },
+      },
+      {
+        id: "panels-fill",
+        type: "fill",
+        source: "panels",
+        minzoom: PANEL_MIN_ZOOM,
+        paint: { "fill-color": "#1f3b5c", "fill-opacity": 0.85 },
+      },
+      {
+        id: "panels-line",
+        type: "line",
+        source: "panels",
+        minzoom: PANEL_MIN_ZOOM,
+        paint: { "line-color": "#dbe6f0", "line-width": ["interpolate", ["linear"], ["zoom"], 17, 0.4, 20, 1.2] },
       },
       {
         id: "draft-fill",

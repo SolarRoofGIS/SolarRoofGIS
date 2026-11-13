@@ -160,6 +160,7 @@ export default function SolarMap({
   onEditChange,
   onEditDone,
   onSelectCustom,
+  panels,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -323,6 +324,18 @@ export default function SolarMap({
           : { type: "FeatureCollection", features: [] },
       );
   }, [ready, selectedGeometry]);
+
+  useEffect(() => {
+    if (!ready) return;
+    mapRef.current.getSource("panels").setData({
+      type: "FeatureCollection",
+      features: panels.map((ring) => ({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: {},
+      })),
+    });
+  }, [ready, panels]);
 
   // The editor reads the outline once when reshaping starts and reports every change back,
   // so it restarts only when the tool changes, not on its own edits.
