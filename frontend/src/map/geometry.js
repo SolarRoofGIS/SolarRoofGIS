@@ -33,8 +33,9 @@ export function panelRings(panels, { widthM, lengthM }) {
 }
 
 // How many panels the viewer chose for a roof: `choice` is what they typed, null or empty for
-// as many as fit. Never fewer than the minimum or more than the roof holds.
-export function chosenPanelCount(choice, maxPanels, minPanels) {
-  if (choice === null || choice === "") return maxPanels;
+// the recommended number (as many as fit until it is known). Never fewer than the minimum or
+// more than the roof holds.
+export function chosenPanelCount(choice, maxPanels, minPanels, recommended = null) {
+  if (choice === null || choice === "") return Math.min(recommended ?? maxPanels, maxPanels);
   return Math.min(Math.max(Number(choice), minPanels), maxPanels);
 }

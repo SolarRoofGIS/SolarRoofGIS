@@ -48,7 +48,7 @@ The API reads `public.bogor_buildings` and `public.batas_bogor` from PostgreSQL 
 - `GET /api/tiles/overview/{z}/{x}/{y}.pbf` (buildings summed into grid cells, zoom 8–14)
 - `GET /api/buildings/:id?panel=550` (building details, geometry, and rooftop solar estimate for the info panel; `panel` is a panel size id, `430`, `550` or `670`, default `550`)
 - `POST /api/roofs/estimate` with `{ "geometry": <GeoJSON Polygon or MultiPolygon>, "panel" }` (the same estimate for a roof drawn on the map)
-- `POST /api/finance/estimate` with `{ "panelCount", "pvout", "monthlyBillRp", "panelType", "panel" }` (investment, bill savings, payback, and a 25-year cost projection)
+- `POST /api/finance/estimate` with `{ "panelCount", "maxPanels", "pvout", "monthlyBillRp", "panelType", "panel", "power" }` (recommended system size, investment, bill savings, payback, and a 25-year cost projection; leave `panelCount` out for the recommended number)
 - `GET /api/stats` (building count, roof area, and technical potential per region, for the home page)
 - `GET /api/method` (calculation assumptions and PVOUT range, for the about page)
 - `GET /api/boundaries` (simplified Kota and Kabupaten Bogor outlines)
@@ -78,7 +78,10 @@ The estimate also returns where each counted panel sits (`solar.layout.panels`, 
 
 ## Financial simulation
 
-Below a suitable roof's estimate, the viewer enters a monthly PLN bill, a panel type, and how many panels to install (the most the roof holds by default), and `POST /api/finance/estimate` ([`backend/finance.js`](backend/finance.js), assumptions at the top) returns the investment at Rp15 million per kWp (85% panels and inverter, 15% balance of system and installation), monthly savings, Payback Period, and cumulative cost with and without panels over 25 years. Polycrystalline panels scale the roof's capacity by their lower efficiency (15%, against 21–22% for the monocrystalline sizes). Since Permen ESDM 2/2024, electricity sent to the grid no longer reduces the bill, so savings are capped at the bill; they assume all production up to that cap is used on site, which makes them an upper limit. The simulation does not yet suggest a system size from the connection's power limit.
+Below a suitable roof's estimate, the viewer picks the home's PLN connection (450 VA subsidised to 16,500 VA, each with its Q4 2026 tariff, from Rp415 to Rp1,699.53 per kWh), enters the monthly electricity spending (bill or token), a panel type, and optionally how many panels to install, and `POST /api/finance/estimate` ([`backend/finance.js`](backend/finance.js), assumptions at the top) returns:
+
+- **Recommended size:** the fewest of three limits: the panels the roof holds; the panels whose yearly output does not exceed the household's use (spending ÷ tariff, street-lighting tax ignored); and the panels whose peak does not exceed the connected power, since a house never draws more than that at once and power sent to the grid earns nothing. Permen ESDM 2/2024 no longer caps capacity at the connected power (PLN's quota does), so this is a sizing rule, not a legal limit. The panel count defaults to the recommendation, and the roof drawing and map show that many panels.
+- **Finance:** the investment at Rp15 million per kWp (85% panels and inverter, 15% balance of system and installation), monthly savings at the connection's tariff, Payback Period, and cumulative cost with and without panels over 25 years. Polycrystalline panels scale the capacity by their lower efficiency (15%, against 21–22% for the monocrystalline sizes). Since Permen ESDM 2/2024, electricity sent to the grid no longer reduces the bill, so savings are capped at the bill; they assume all production up to that cap is used on site, which makes them an upper limit.
 
 ## Drawn roofs
 

@@ -45,8 +45,9 @@ const LIMITATIONS = [
   "Luas atap adalah luas tapak bangunan dari atas. Kemiringan atap, bahan, dan kekuatan struktur tidak diketahui.",
   "Bayangan dari pohon, gedung tinggi, atau perbukitan tidak dihitung satu per satu, hanya lewat faktor 70%.",
   "PVOUT beresolusi sekitar 1 km, jadi atap yang berdekatan mendapat nilai yang sama.",
-  "Sejak Permen ESDM 2/2024, listrik yang dikirim ke jaringan PLN tidak lagi mengurangi tagihan. Nilai listrik adalah nilai energinya, sedangkan penghematan dihitung terpisah di simulasi finansial.",
-  "Simulasi finansial memakai biaya rata-rata per kWp dan menganggap seluruh produksi terpakai sendiri sampai sebesar pengeluaran listrik, jadi penghematannya adalah batas atas.",
+  "Sejak Permen ESDM 2/2024, listrik yang dikirim ke jaringan PLN tidak lagi mengurangi tagihan. Nilai listrik adalah nilai energinya, sedangkan penghematan dihitung terpisah di simulasi biaya.",
+  "Simulasi biaya memakai biaya rata-rata per kWp dan menganggap seluruh produksi terpakai sendiri sampai sebesar pengeluaran listrik, jadi penghematannya adalah batas atas.",
+  "Rekomendasi jumlah panel memperkirakan pemakaian kWh dari pengeluaran dibagi tarif PLN, tanpa pajak penerangan jalan, dan belum memperhitungkan pola pemakaian siang dan malam.",
   "Tarif listrik dan faktor emisi jaringan dapat berubah dan perlu diperbarui secara berkala.",
 ];
 
@@ -126,8 +127,13 @@ export default function AboutPage() {
     ["Faktor area terpakai", a && `${formatNumber(a.packingFactor * 100)}%`],
     ["Ukuran panel", a && a.panels.map((panel) => `${panel.powerWp} Wp`).join(", ")],
     ["Minimal panel per atap", a && a.minPanels],
-    ["Tarif listrik PLN", a && `Rp${formatNumber(a.tariffRpPerKwh, 2)}/kWh`],
-    ["Biaya investasi PLTS", a && `Rp${formatNumber(a.finance.costRpPerKwp)}/kWp`],
+    ["Tarif listrik PLN (nilai listrik)", a && `Rp${formatNumber(a.tariffRpPerKwh, 2)}/kWh`],
+    [
+      "Tarif PLN di simulasi biaya",
+      a &&
+        `Rp${formatNumber(Math.min(...a.finance.powerOptions.map((o) => o.tariffRpPerKwh)), 0)}–${formatNumber(Math.max(...a.finance.powerOptions.map((o) => o.tariffRpPerKwh)), 2)}/kWh, sesuai daya`,
+    ],
+    ["Biaya pasang PLTS atap", a && `Rp${formatNumber(a.finance.costRpPerKwp)}/kWp`],
     ["Faktor emisi Jawa-Bali", a && `${formatNumber(a.gridEmissionKgPerKwh, 2)} kg CO₂/kWh`],
     [
       "Rentang PVOUT di peta",

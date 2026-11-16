@@ -14,9 +14,9 @@ const ASSUMPTIONS = {
   // 182 mm cells, and 132 half-cut 210 mm cells. The viewer picks one; the default is also
   // the one behind the map colours and the overview figures.
   panels: [
-    { id: "430", widthM: 1.134, lengthM: 1.722, powerWp: 430 },
-    { id: "550", widthM: 1.134, lengthM: 2.278, powerWp: 550 },
-    { id: "670", widthM: 1.303, lengthM: 2.384, powerWp: 670 },
+    { id: "430", label: "Kecil", widthM: 1.134, lengthM: 1.722, powerWp: 430 },
+    { id: "550", label: "Sedang", widthM: 1.134, lengthM: 2.278, powerWp: 550 },
+    { id: "670", label: "Besar", widthM: 1.303, lengthM: 2.384, powerWp: 670 },
   ],
   defaultPanel: "550",
   // Clamp gap between neighbouring panels when they are laid out on the roof.

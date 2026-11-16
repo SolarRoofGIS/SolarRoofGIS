@@ -65,6 +65,12 @@ export default function MapPage() {
   // roof: null for as many as fit, otherwise what they typed.
   const [panelId, setPanelId] = useState(DEFAULT_PANEL_ID);
   const [panelChoice, setPanelChoice] = useState(null);
+  // The recommended number for the selected roof, reported by the financial simulation.
+  const [recommendedPanels, setRecommendedPanels] = useState(null);
+  const resetPanelChoice = () => {
+    setPanelChoice(null);
+    setRecommendedPanels(null);
+  };
   const customEstimatesRef = useRef(customEstimates);
   customEstimatesRef.current = customEstimates;
   const phone = useMediaQuery(PHONE_LAYOUT);
@@ -156,7 +162,12 @@ export default function MapPage() {
   if (customEstimate?.status === "ready") activeDetail = customEstimate.detail;
   else if (!selectedCustom && selection.status === "ready") activeDetail = selection.detail;
   const shownPanels = activeDetail
-    ? chosenPanelCount(panelChoice, activeDetail.solar.panelCount, activeDetail.assumptions.minPanels)
+    ? chosenPanelCount(
+        panelChoice,
+        activeDetail.solar.panelCount,
+        activeDetail.assumptions.minPanels,
+        recommendedPanels,
+      )
     : 0;
   const panelRingList = useMemo(
     () =>
@@ -165,27 +176,27 @@ export default function MapPage() {
   );
 
   const addCustomRoof = (roof) => {
-    setPanelChoice(null);
+    resetPanelChoice();
     setCustomRoofs((roofs) => [...roofs, roof].slice(-MAX_DRAWN_ROOFS));
     setSelectedId(null);
     setSelectedCustomId(roof.id);
     setPanelCollapsed(false);
   };
   const selectBuilding = (id) => {
-    if (id !== selectedId) setPanelChoice(null);
+    if (id !== selectedId) resetPanelChoice();
     setSelectedCustomId(null);
     setSelectedId(id);
     setPanelCollapsed(false);
   };
   const selectCustom = (id) => {
-    if (id !== selectedCustomId) setPanelChoice(null);
+    if (id !== selectedCustomId) resetPanelChoice();
     setSelectedId(null);
     setSelectedCustomId(id);
     setTool("off");
     setPanelCollapsed(false);
   };
   const clearSelection = () => {
-    setPanelChoice(null);
+    resetPanelChoice();
     setSelectedId(null);
     setSelectedCustomId(null);
     setTool("off");
@@ -281,6 +292,7 @@ export default function MapPage() {
           onPanelIdChange: setPanelId,
           choice: panelChoice,
           onChoiceChange: setPanelChoice,
+          onRecommendation: setRecommendedPanels,
         }}
       />
     </main>
