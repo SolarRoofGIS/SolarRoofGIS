@@ -87,21 +87,15 @@
   color: var(--ink-soft);
 }
 
-.intro-steps {
+.intro-actions {
   display: grid;
-  gap: 10px;
-  margin: 14px 0 16px;
-  padding: 0 0 0 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 4px;
 }
 
-.intro-steps li::marker {
-  color: var(--ink-faint);
-  font-weight: 600;
-}
-
-.intro-cta {
-  width: 100%;
-  font-size: 14px;
+.intro-actions .button {
+  justify-content: center;
 }
 
 .intro-custom {
@@ -290,32 +284,9 @@
   font-size: 11.5px;
 }
 
-.panel-size-hint {
-  margin: 6px 0 0;
-  color: var(--ink-faint);
-  font-size: 11.5px;
-  line-height: 1.45;
-}
-
 .hero-label {
   color: var(--ink-soft);
   font-size: 12.5px;
-}
-
-.hero-rate {
-  color: var(--ink-soft);
-  font-size: 14px;
-}
-
-.hero-rate strong {
-  color: var(--ink);
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.hero-rate + .hero-sub {
-  margin-top: 6px;
 }
 
 .hero-value {
@@ -335,11 +306,6 @@
 .hero-sub {
   color: var(--ink-soft);
   font-size: 12.5px;
-}
-
-.hero-note {
-  color: var(--ink-faint);
-  font-size: 11.5px;
 }
 
 .hero-unsuitable .hero-value {
@@ -368,54 +334,6 @@
   font-weight: 600;
 }
 
-/* Roof → usable area → panels → energy, as a short table. */
-.flow {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.flow-step {
-  padding: 8px 0;
-}
-
-.flow-step + .flow-step {
-  border-top: 1px dotted var(--line);
-}
-
-.flow-step-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.flow-step-head strong {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.flow-step-note {
-  margin-top: 2px !important;
-  color: var(--ink-faint);
-  font-size: 12px;
-}
-
-.flow-step-final .flow-step-head strong {
-  color: var(--orange-dark);
-}
-
-.usable-bar {
-  height: 4px;
-  margin-top: 6px;
-  background: var(--mist);
-}
-
-.usable-bar div {
-  height: 100%;
-  background: var(--forest);
-}
-
 .level-badge {
   font-size: 12.5px;
   font-weight: 600;
@@ -432,17 +350,6 @@
 .level-low,
 .level-none {
   color: var(--ink-soft);
-}
-
-.sunlight-value {
-  color: var(--ink-soft);
-}
-
-.sunlight-value strong {
-  color: var(--ink);
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
 }
 
 .sunlight-scale {
@@ -506,34 +413,6 @@
 .month-bar span {
   color: var(--ink-faint);
   font-size: 10px;
-}
-
-.benefit-list {
-  display: grid;
-  gap: 12px;
-  margin: 0;
-}
-
-.benefit-list div {
-  display: grid;
-  gap: 0 12px;
-  grid-template-columns: 1fr auto;
-}
-
-.benefit-list dt {
-  color: var(--ink);
-}
-
-.benefit-list dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.benefit-list p {
-  grid-column: 1 / -1;
-  color: var(--ink-faint);
-  font-size: 12px;
 }
 
 .sidebar-details {
@@ -632,42 +511,130 @@
 }
 
 /* Financial simulation. */
-/* The recommended system size, between the household inputs and the panel count. */
-.finance-recommendation {
+/* Figures read at a glance: a small label over a bold value. */
+.hero-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stat-row,
+.stat-grid {
   display: grid;
-  gap: 3px;
-  margin: 0 0 12px;
-  padding: 10px 12px;
+  gap: 8px;
+}
+
+.stat-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stat {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stat span {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.stat strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.stat small {
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* The household result: suggested size, then cost, savings, payback and output. */
+.finance-summary {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px;
   border-left: 3px solid var(--forest);
   border-radius: var(--radius);
   background: var(--forest-soft);
 }
 
-.finance-recommendation.is-weak {
+.finance-summary.is-weak {
   border-left-color: var(--ink-faint);
   background: var(--mist);
 }
 
-.finance-recommendation-label {
+.finance-summary-head {
+  display: grid;
+  gap: 2px;
+}
+
+.finance-summary-head span {
   color: var(--ink-soft);
   font-size: 12px;
 }
 
-.finance-recommendation strong {
-  font-size: 17px;
+.finance-summary-head strong {
+  font-size: 19px;
   font-variant-numeric: tabular-nums;
 }
 
-.finance-recommendation p {
-  margin: 2px 0 0;
+.finance-summary-head p {
+  margin: 0;
   color: var(--ink-soft);
   font-size: 12.5px;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
-.finance-recommendation .text-button {
-  justify-self: start;
-  margin-top: 2px;
+.finance-inputs-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+/* Inside "Grafik dan rincian". */
+.detail-block {
+  margin: 4px 0 14px;
+}
+
+.detail-block figcaption {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar-details .detail-rows {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.detail-row dt {
+  color: var(--ink-soft);
+}
+
+.detail-row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
 }
 
 .finance-warning {
@@ -675,10 +642,6 @@
   color: #9a3412;
   font-size: 12.5px;
   line-height: 1.45;
-}
-
-.sidebar-muted.finance-intro {
-  margin: 0 0 12px !important;
 }
 
 .finance-inputs {

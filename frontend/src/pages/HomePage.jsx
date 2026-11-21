@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { fetchBuildingDetail, fetchJson } from "../api";
-import { formatNumber } from "../format";
+import { approx, formatNumber } from "../format";
 import SiteFooter from "../layout/SiteFooter";
 import { pvoutCss } from "../map/colors";
 import RoofOutline from "../map/RoofOutline";
@@ -80,7 +80,7 @@ function ExampleRoof() {
           ))}
           <tr className="example-total">
             <th scope="row">Listrik per tahun</th>
-            <td>{solar ? `${formatNumber(solar.annualKwh)} kWh` : placeholder}</td>
+            <td>{solar ? approx(`${formatNumber(solar.annualKwh)} kWh`) : placeholder}</td>
           </tr>
         </tbody>
       </table>
@@ -112,8 +112,8 @@ export default function HomePage() {
   const figures = [
     ["Bangunan dipetakan", total && formatMillions(total.buildings)],
     ["Total luas atap", total && `${formatNumber(total.roofAreaM2 / 1e6)} km²`],
-    ["Kapasitas panel teknis", total && `${formatNumber(total.capacityKwp / 1e6, 1)} GWp`],
-    ["Listrik per tahun", total && `${formatNumber(total.annualGwh / 1000, 1)} TWh`],
+    ["Kapasitas panel teknis", total && approx(`${formatNumber(total.capacityKwp / 1e6, 1)} GWp`)],
+    ["Listrik per tahun", total && approx(`${formatNumber(total.annualGwh / 1000, 1)} TWh`)],
   ];
 
   return (
@@ -170,7 +170,7 @@ export default function HomePage() {
                   <td>{formatMillions(region.buildings)}</td>
                   <td>{formatNumber(region.roofAreaM2 / 1e6, 1)} km²</td>
                   <td>{formatNumber((region.suitableBuildings / region.buildings) * 100)}%</td>
-                  <td>{formatNumber(region.annualGwh)} GWh</td>
+                  <td>~{formatNumber(region.annualGwh)} GWh</td>
                   <td>
                     {formatNumber(region.pvoutMin)}–{formatNumber(region.pvoutMax)}
                   </td>

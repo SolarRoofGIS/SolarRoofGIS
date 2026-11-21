@@ -1,10 +1,10 @@
 import { Check, ChevronDown, ChevronUp, Download, ExternalLink, LoaderCircle, PenLine, Trash2, X } from "lucide-react";
-import { formatNumber, formatRupiah, MONTH_NAMES } from "../format";
-import { PVOUT_RAMP, pvoutCss } from "../map/colors";
+import { Link } from "react-router-dom";
+import { approx, formatNumber } from "../format";
+import { pvoutCss } from "../map/colors";
 import RoofOutline from "../map/RoofOutline";
 import { geometryAreaM2 } from "../map/roofDrawing";
 import FinanceSection from "./FinanceSection";
-import SectionTitle from "./SectionTitle";
 import "./Sidebar.css";
 
 function regionName(region, checked = true) {
@@ -29,25 +29,15 @@ function panelSize(assumptions, id) {
 function Intro({ onExplore, onDraw, customRoofs, onSelectCustom }) {
   return (
     <div className="sidebar-intro">
-      <p>Perkiraan listrik dari panel surya di atap setiap bangunan di Kota dan Kabupaten Bogor.</p>
-      <ol className="intro-steps">
-        <li>
-          Warna menunjukkan energi surya tahunan (PVOUT): kuning lebih rendah, oranye tua lebih tinggi. Dari jauh
-          terlihat overlay PVOUT Global Solar Atlas, setelah diperbesar warna tiap atap.
-        </li>
-        <li>Klik sebuah kawasan untuk memperbesar sampai bentuk atap terlihat.</li>
-        <li>Klik sebuah atap untuk melihat panel yang muat, listrik per tahun, dan manfaatnya.</li>
-        <li>
-          Bentuk atap tidak pas atau belum ada?{" "}
-          <button type="button" className="text-button" onClick={onDraw}>
-            Gambar atap sendiri
-          </button>{" "}
-          dengan mengklik sudut-sudutnya.
-        </li>
-      </ol>
-      <button type="button" className="button button-outline intro-cta" onClick={onExplore}>
-        Lihat contoh di pusat Kota Bogor
-      </button>
+      <p>Klik atap di peta untuk melihat listrik dan penghematan dari panel surya.</p>
+      <div className="intro-actions">
+        <button type="button" className="button button-outline" onClick={onExplore}>
+          Lihat contoh
+        </button>
+        <button type="button" className="button button-outline" onClick={onDraw}>
+          <PenLine size={15} /> Gambar atap
+        </button>
+      </div>
       {customRoofs.length > 0 && (
         <button
           type="button"
@@ -60,172 +50,29 @@ function Intro({ onExplore, onDraw, customRoofs, onSelectCustom }) {
         </button>
       )}
       <p className="sidebar-source">
-        Sumber: Google Open Buildings (bentuk atap), Global Solar Atlas (PVOUT), BIG (batas wilayah).
+        Angka bertanda ~ adalah perkiraan.{" "}
+        <Link to="/tentang" className="text-button">
+          Cara menghitung dan sumber data
+        </Link>
       </p>
     </div>
-  );
-}
-
-function FlowStep({ label, value, note, children, final }) {
-  return (
-    <li className={`flow-step${final ? " flow-step-final" : ""}`}>
-      <div className="flow-step-head">
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-      {children}
-      {note && <p className="flow-step-note">{note}</p>}
-    </li>
-  );
-}
-
-function RoofToEnergy({ solar, assumptions }) {
-  const panel = panelSize(assumptions, solar.panel.id);
-  return (
-    <section className="sidebar-section">
-      <SectionTitle>Berapa panel yang muat?</SectionTitle>
-      <ol className="flow">
-        <FlowStep
-          label="Bagian atap yang bisa dipasangi"
-          value={`${formatNumber(solar.usableM2)} m²`}
-          note={`Sekitar ${formatNumber(solar.usableShare * 100)}% dari luas atap. Sisanya dibiarkan kosong: ${formatNumber(assumptions.setbackM, 1)} m di setiap pinggir atap untuk keamanan dan perawatan, juga tempat tandon air, bagian yang terlalu miring, atau yang sering teduh.`}
-        >
-          <div className="usable-bar" aria-hidden="true">
-            <div style={{ width: `${Math.min(solar.usableShare * 100, 100)}%` }} />
-          </div>
-        </FlowStep>
-        <FlowStep
-          label="Jumlah panel surya"
-          value={`${formatNumber(solar.panelCount)} panel`}
-          note={`Panel ukuran ${panel.label.toLowerCase()} (${panel.powerWp} Wp), ${formatNumber(panel.widthM, 2)} × ${formatNumber(panel.lengthM, 2)} m. Bila semua dipasang, daya totalnya ${formatNumber(solar.capacityKwp, 1)} kWp (kilowatt-peak, daya saat matahari terik).${solar.limitedByLayout ? " Jumlahnya dibatasi bentuk atap, karena hanya panel utuh yang bisa disusun berbaris." : ""}`}
-          final
-        />
-      </ol>
-    </section>
-  );
-}
-
-function Sunlight({ solar }) {
-  const level = sunlightLevel(solar.pvoutRank);
-  const range = solar.pvoutRange;
-  const position =
-    range && solar.pvout !== null
-      ? Math.min(Math.max((solar.pvout - range.min) / (range.max - range.min), 0), 1) * 100
-      : null;
-
-  return (
-    <section className="sidebar-section">
-      <SectionTitle aside={<span className={`level-badge level-${level.tone}`}>{level.label}</span>}>
-        Sinar matahari di lokasi ini
-      </SectionTitle>
-      {solar.pvout === null ? (
-        <p className="sidebar-muted">Data sinar matahari tidak tersedia di lokasi ini.</p>
-      ) : (
-        <>
-          <p className="sunlight-value">
-            Setiap 1 kWp panel di sini menghasilkan sekitar <strong>{formatNumber(solar.pvout)}</strong> kWh per tahun.
-          </p>
-          {position !== null && (
-            <div className="sunlight-scale">
-              <div
-                className="sunlight-ramp"
-                style={{
-                  background: `linear-gradient(to right, ${PVOUT_RAMP.join(", ")})`,
-                }}
-              />
-              <div className="sunlight-marker" style={{ left: `${position}%` }} />
-              <div className="sunlight-labels">
-                <span>Teredup di Bogor, {formatNumber(range.min)}</span>
-                <span>{formatNumber(range.max)}, tercerah</span>
-              </div>
-            </div>
-          )}
-          <p className="sidebar-muted">
-            {solar.pvoutRank >= 0.5
-              ? `Lebih cerah dari ${formatNumber(solar.pvoutRank * 100)}% wilayah Bogor.`
-              : `${formatNumber((1 - solar.pvoutRank) * 100)}% wilayah Bogor sedikit lebih cerah dari lokasi ini.`}
-            {range &&
-              ` Selisihnya kecil: lokasi tercerah di Bogor hanya sekitar ${formatNumber(((range.max - range.min) / range.min) * 100)}% lebih tinggi dari yang teredup, jadi atap di mana pun di Bogor tetap bisa dipasangi panel.`}
-            {solar.optimumTilt !== null &&
-              ` Hasil terbaik bila panel menghadap utara dengan kemiringan sekitar ${formatNumber(solar.optimumTilt)}°.`}
-          </p>
-        </>
-      )}
-    </section>
-  );
-}
-
-// November–March, the wet season in West Java (zero-based month indexes).
-const RAINY_MONTHS = [10, 11, 0, 1, 2];
-
-function MonthlyChart({ monthlyKwh }) {
-  const peak = Math.max(...monthlyKwh, 1);
-  const best = monthlyKwh.indexOf(Math.max(...monthlyKwh));
-  const worst = monthlyKwh.indexOf(Math.min(...monthlyKwh));
-
-  return (
-    <section className="sidebar-section">
-      <SectionTitle>Listrik per bulan</SectionTitle>
-      <div className="month-chart" role="img" aria-label="Grafik produksi listrik per bulan">
-        {monthlyKwh.map((kwh, month) => (
-          <div
-            key={MONTH_NAMES[month]}
-            className={`month-bar${month === best ? " month-bar-best" : ""}`}
-            title={`${MONTH_NAMES[month]}: ${formatNumber(kwh)} kWh`}
-          >
-            <div className="month-bar-track">
-              <div className="month-bar-fill" style={{ height: `${Math.max((kwh / peak) * 100, 2)}%` }} />
-            </div>
-            <span>{MONTH_NAMES[month].slice(0, 3)}</span>
-          </div>
-        ))}
-      </div>
-      <p className="sidebar-muted">
-        Paling banyak di bulan {MONTH_NAMES[best]} ({formatNumber(monthlyKwh[best])} kWh), paling sedikit di bulan{" "}
-        {MONTH_NAMES[worst]} ({formatNumber(monthlyKwh[worst])} kWh)
-        {RAINY_MONTHS.includes(worst) ? " karena langit lebih sering berawan saat musim hujan." : "."}
-      </p>
-    </section>
-  );
-}
-
-function Benefits({ solar, assumptions }) {
-  return (
-    <section className="sidebar-section">
-      <SectionTitle>Manfaat per tahun</SectionTitle>
-      <dl className="benefit-list">
-        <div>
-          <dt>Nilai listriknya</dt>
-          <dd>{formatRupiah(solar.annualValueRp)}</dd>
-          <p>
-            Seandainya listrik sebanyak ini dibeli dari PLN (Rp{formatNumber(assumptions.tariffRpPerKwh, 2)} per kWh).
-            Penghematan tagihan yang sebenarnya bergantung pada pemakaian Anda, hitung di Simulasi biaya di bawah.
-          </p>
-        </div>
-        <div>
-          <dt>Emisi CO₂ berkurang</dt>
-          <dd>{formatNumber(solar.annualCo2Kg / 1000, 1)} ton</dd>
-          <p>
-            Listrik PLN di Jawa-Bali sebagian besar dari pembangkit batu bara, sekitar{" "}
-            {formatNumber(assumptions.gridEmissionKgPerKwh, 2)} kg CO₂ per kWh.
-          </p>
-        </div>
-      </dl>
-    </section>
   );
 }
 
 // What to do before installing; the estimate is only a first look from satellite imagery.
 function NextSteps() {
   return (
-    <section className="sidebar-section">
-      <SectionTitle>Langkah selanjutnya</SectionTitle>
+    <details className="sidebar-details">
+      <summary>
+        Langkah selanjutnya
+        <ChevronDown size={16} className="details-chevron" />
+      </summary>
       <ol className="next-steps">
-        <li>Cek kondisi atap: bahan, kekuatan rangka, dan bayangan dari pohon atau bangunan di sekitarnya.</li>
-        <li>Minta survei dan penawaran harga dari beberapa penyedia (installer) PLTS atap.</li>
-        <li>Jika panel akan tersambung ke jaringan PLN, ajukan permohonan PLTS atap ke PLN lebih dulu.</li>
+        <li>Cek bahan dan kekuatan atap, serta bayangan pohon atau bangunan.</li>
+        <li>Minta survei dan penawaran dari beberapa installer PLTS atap.</li>
+        <li>Ajukan permohonan PLTS atap ke PLN sebelum memasang.</li>
       </ol>
-    </section>
+    </details>
   );
 }
 
@@ -277,38 +124,29 @@ function Method({ solar, assumptions }) {
       </summary>
       <ol className="method-list">
         <li>
-          Luas atap diukur dari bentuknya pada citra satelit, lalu dikurangi {formatNumber(assumptions.setbackM, 1)} m
-          di setiap pinggir.
+          Luas atap dari citra satelit, dikurangi {formatNumber(assumptions.setbackM, 1)} m di setiap pinggir. Dari
+          sisanya, {formatNumber(assumptions.packingFactor * 100)}% dianggap bisa dipasangi (sisanya untuk bagian
+          miring, tandon, dan bayangan).
         </li>
         <li>
-          Dari sisa atap, {formatNumber(assumptions.packingFactor * 100)}% dianggap bisa dipasangi panel. Sisanya untuk
-          bagian yang miring, tandon air, bayangan, dan jalan untuk perawatan.
+          Panel {panel.powerWp} Wp ({formatNumber(panel.areaM2, 2)} m²) dihitung yang benar-benar muat disusun berbaris.
+          Atap yang muat kurang dari {assumptions.minPanels} panel dianggap belum layak.
         </li>
         <li>
-          Luas itu dibagi luas satu panel ({formatNumber(panel.areaM2, 2)} m² untuk panel {panel.powerWp} Wp), lalu
-          dicek apakah panel sebanyak itu benar-benar muat disusun berbaris. Atap yang muat kurang dari{" "}
-          {assumptions.minPanels} panel dianggap belum layak.
+          Listrik = kWp × sinar matahari lokasi (Global Solar Atlas, sudah termasuk rugi inverter, kabel, debu, dan
+          panas).
         </li>
         <li>
-          Listrik per tahun = daya panel (kWp) × sinar matahari di lokasi (kWh per kWp per tahun, dari Global Solar
-          Atlas). Angka ini sudah memperhitungkan daya yang hilang di inverter dan kabel, karena debu, dan karena panas.
+          Saran jumlah panel = paling sedikit dari: yang muat di atap, yang tidak melebihi pemakaian Anda (pengeluaran ÷
+          tarif PLN), dan yang tidak melebihi daya PLN. Kelebihan listrik yang masuk ke PLN tidak mengurangi tagihan
+          (Permen ESDM 2/2024).
         </li>
         <li>
-          Rekomendasi jumlah panel adalah yang paling sedikit dari tiga batas: panel yang muat di atap, panel yang
-          listriknya tidak melebihi pemakaian Anda (pengeluaran ÷ tarif PLN untuk daya Anda), dan panel yang dayanya
-          tidak melebihi daya listrik PLN di rumah. Aturan PLTS atap (Permen ESDM 2/2024) tidak lagi membatasi kapasitas
-          sebesar daya PLN, tetapi pemasangan perlu kuota dari PLN.
-        </li>
-        <li>
-          Biaya pasang dihitung Rp{formatNumber(assumptions.finance.costRpPerKwp)} per kWp. Penghematan dihitung dengan
-          tarif PLN untuk daya Anda dan tidak bisa melebihi pengeluaran listrik Anda. Balik modal = biaya pasang ÷
-          penghematan per tahun.
+          Biaya pasang Rp{formatNumber(assumptions.finance.costRpPerKwp)} per kWp. Balik modal = biaya ÷ hemat per
+          tahun.
         </li>
       </ol>
-      <p className="sidebar-muted">
-        Semua angka di sini perkiraan awal dari citra satelit, bukan hasil survei. Kondisi atap sebenarnya perlu dicek
-        langsung.
-      </p>
+      <p className="sidebar-muted">Perkiraan awal dari citra satelit, bukan hasil survei.</p>
     </details>
   );
 }
@@ -350,7 +188,11 @@ function PanelSizePicker({ assumptions, panelId, onChange }) {
       <legend>Ukuran panel</legend>
       <div className="panel-size-options">
         {assumptions.panels.map((panel) => (
-          <label key={panel.id} className={panel.id === panelId ? "is-active" : undefined}>
+          <label
+            key={panel.id}
+            className={panel.id === panelId ? "is-active" : undefined}
+            title={`${panel.powerWp} Wp, ${formatNumber(panel.widthM, 2)} × ${formatNumber(panel.lengthM, 2)} m`}
+          >
             <input
               type="radio"
               name="panel-size"
@@ -360,23 +202,27 @@ function PanelSizePicker({ assumptions, panelId, onChange }) {
             />
             <strong>{panel.label}</strong>
             <span>{panel.powerWp} Wp</span>
-            <span>
-              {formatNumber(panel.widthM, 2)} × {formatNumber(panel.lengthM, 2)} m
-            </span>
           </label>
         ))}
       </div>
-      <p className="panel-size-hint">
-        Wp (watt-peak) adalah daya satu panel saat matahari terik. Panel kecil lebih mudah muat di atap sempit.
-      </p>
     </fieldset>
   );
 }
 
-// The roof's shape with the length of every side and the panels on it, then the estimate per
-// month, the unit a household bill uses, with the year and day below it.
+function RoofStat({ label, value }) {
+  return (
+    <div className="stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+// The roof's shape with its sides and panels, the panel size, and what the whole roof could
+// produce; what suits the household follows in FinanceSection.
 function Hero({ solar, assumptions, geometry, panelPlan }) {
   const reason = solar.suitable ? null : unsuitableReason(solar, assumptions);
+  const level = sunlightLevel(solar.pvoutRank);
   return (
     <div className={`hero${solar.suitable ? "" : " hero-unsuitable"}`}>
       <figure className="hero-shape">
@@ -392,19 +238,17 @@ function Hero({ solar, assumptions, geometry, panelPlan }) {
       <PanelSizePicker assumptions={assumptions} panelId={solar.panel.id} onChange={panelPlan.onPanelIdChange} />
       {solar.suitable ? (
         <>
-          <span className="hero-label">Perkiraan listrik dari atap ini</span>
-          <span className="hero-value">
-            {formatNumber(solar.annualKwh / 12)} <small>kWh per bulan</small>
-          </span>
-          <span className="hero-rate">
-            <strong>{formatNumber(solar.annualKwh)}</strong> kWh per tahun, atau{" "}
-            <strong>{formatNumber(solar.annualKwh / 365, 1)}</strong> kWh per hari
-          </span>
-          <span className="hero-sub">
-            Dari {formatNumber(solar.panelCount)} panel surya dengan daya total {formatNumber(solar.capacityKwp, 1)}{" "}
-            kWp.
-          </span>
-          <span className="hero-note">Satuan kWh sama dengan yang tertera di meteran dan token listrik PLN.</span>
+          <div className="hero-head">
+            <span className="hero-label">Potensi maksimal atap</span>
+            <span className={`level-badge level-${level.tone}`} title="Sinar matahari dibanding wilayah Bogor lain">
+              Sinar matahari {level.label.toLowerCase()}
+            </span>
+          </div>
+          <div className="stat-row">
+            <RoofStat label="Muat" value={`${formatNumber(solar.panelCount)} panel`} />
+            <RoofStat label="Daya" value={`${formatNumber(solar.capacityKwp, 1)} kWp`} />
+            <RoofStat label="Listrik per bulan" value={approx(`${formatNumber(solar.annualKwh / 12)} kWh`)} />
+          </div>
         </>
       ) : (
         <>
@@ -419,23 +263,15 @@ function Hero({ solar, assumptions, geometry, panelPlan }) {
 
 // Everything below the headline figure, the same for a database roof and a drawn one.
 function EstimateSections({ solar, assumptions, panelPlan }) {
+  if (!solar.suitable) return null;
   return (
-    <>
-      {solar.suitable && <RoofToEnergy solar={solar} assumptions={assumptions} />}
-      <Sunlight solar={solar} />
-      {solar.suitable && <MonthlyChart monthlyKwh={solar.monthlyKwh} />}
-      {solar.suitable && <Benefits solar={solar} assumptions={assumptions} />}
-      {solar.suitable && (
-        <FinanceSection
-          solar={solar}
-          assumptions={assumptions}
-          panelChoice={panelPlan.choice}
-          onPanelChoiceChange={panelPlan.onChoiceChange}
-          onRecommendation={panelPlan.onRecommendation}
-        />
-      )}
-      {solar.suitable && <NextSteps />}
-    </>
+    <FinanceSection
+      solar={solar}
+      assumptions={assumptions}
+      panelChoice={panelPlan.choice}
+      onPanelChoiceChange={panelPlan.onChoiceChange}
+      onRecommendation={panelPlan.onRecommendation}
+    />
   );
 }
 
@@ -446,13 +282,14 @@ function BuildingInfo({ detail, refreshing, onReshape, panelPlan }) {
     <div className={refreshing ? "is-refreshing" : undefined}>
       <Hero solar={solar} assumptions={assumptions} geometry={building.geometry} panelPlan={panelPlan} />
       <p className="reshape-hint">
-        Bentuk atap kurang pas dengan foto satelit?{" "}
+        Bentuk tidak pas?{" "}
         <button type="button" className="text-button" onClick={() => onReshape(detail)}>
           Ubah bentuknya
         </button>
       </p>
       <EstimateSections solar={solar} assumptions={assumptions} panelPlan={panelPlan} />
       <div className="sidebar-details-group">
+        {solar.suitable && <NextSteps />}
         <BuildingDetails building={building} />
         <Method solar={solar} assumptions={assumptions} />
       </div>
@@ -602,6 +439,7 @@ function CustomRoofInfo({ custom, customRoofs, onEdit, onDoneEditing, onDelete, 
           />
           <EstimateSections solar={detail.solar} assumptions={detail.assumptions} panelPlan={panelPlan} />
           <div className="sidebar-details-group">
+            {detail.solar.suitable && <NextSteps />}
             <CustomDetails customRoof={customRoof} detail={detail} />
             <Method solar={detail.solar} assumptions={detail.assumptions} />
           </div>

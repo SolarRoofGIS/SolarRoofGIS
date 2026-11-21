@@ -13,10 +13,12 @@ export async function fetchJson(path, options) {
 // building and panel size per session is enough.
 const detailCache = {};
 
+// Without a panel size the server uses its default one.
 export function fetchBuildingDetail(id, panelId) {
-  const key = `${id}:${panelId}`;
+  const key = `${id}:${panelId ?? ""}`;
+  const query = panelId ? `?panel=${encodeURIComponent(panelId)}` : "";
   if (!detailCache[key]) {
-    detailCache[key] = fetchJson(`/api/buildings/${id}?panel=${encodeURIComponent(panelId)}`).catch((error) => {
+    detailCache[key] = fetchJson(`/api/buildings/${id}${query}`).catch((error) => {
       delete detailCache[key];
       throw error;
     });

@@ -11,6 +11,16 @@ export function formatRupiah(value) {
   return `Rp${formatNumber(value)}`;
 }
 
+// Estimates carry "~" so no one reads them as measured or guaranteed.
+export function approx(text) {
+  return `~${text}`;
+}
+
+// A rupiah estimate rounded to the thousand, since the last digits only suggest false precision.
+export function approxRupiah(value) {
+  return approx(formatRupiah(value >= 1e6 ? value : Math.round(value / 1000) * 1000));
+}
+
 export const MONTH_NAMES = [
   "Januari",
   "Februari",

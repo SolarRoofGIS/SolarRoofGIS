@@ -18,10 +18,10 @@
   "scripts": {
     "copy-maplibre-worker": "node -e \"require('fs').copyFileSync('node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs', 'public/maplibre-gl-worker.mjs')\"",
     "prestart": "npm run copy-maplibre-worker",
-    "start": "react-scripts start",
+    "start": "react-app-rewired start",
     "prebuild": "npm run copy-maplibre-worker",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -41,5 +41,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "react-app-rewired": "^2.2.1"
   }
 }

@@ -342,6 +342,11 @@
   font-weight: 400;
 }
 
+.doc-subhead {
+  margin: 18px 0 6px;
+  font-size: 15px;
+}
+
 .plain-list {
   display: grid;
   gap: 8px;

@@ -13,4 +13,14 @@ npm run dev
 
 The server listens on port 5000 by default. `npm start` runs the same server without nodemon.
 
+## Tests
+
+```bash
+npm test
+```
+
+Runs the calculation tests in `test/` with Node's built-in test runner, without a database: the panel layout (count, rotation, panels inside the roof and not overlapping), the solar estimate, the financial simulation and recommendation, and the input validation of `POST /api/finance/estimate`.
+
+## Configuration
+
 Set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` in `.env`; `DATABASE_URL` is also supported. CORS is open to every origin. Both database tables are optional for trying the roof drawing tool: see [SETUP.md](../SETUP.md).
