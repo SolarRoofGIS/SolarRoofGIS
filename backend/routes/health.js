@@ -3,6 +3,8 @@ const { errorDetail } = require("../httpErrors");
 const pool = require("../db");
 
 const router = express.Router();
+// The commit a Vercel deployment was built from, so tools can tell which version is live.
+const commit = process.env.VERCEL_GIT_COMMIT_SHA || null;
 
 router.get("/", async (_request, response) => {
   try {
@@ -16,6 +18,7 @@ router.get("/", async (_request, response) => {
 
     response.json({
       ok: available,
+      commit,
       storage: "PostGIS",
       database: rows[0].database,
       postgisVersion: rows[0].postgisVersion,
@@ -25,6 +28,7 @@ router.get("/", async (_request, response) => {
     console.error("PostGIS health check failed:", error);
     response.status(503).json({
       ok: false,
+      commit,
       storage: "PostGIS",
       ...errorDetail(error),
       datasets: { google: { available: false } },

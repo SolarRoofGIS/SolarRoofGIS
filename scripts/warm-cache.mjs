@@ -1,16 +1,41 @@
 // Requests the heavy read-only API answers once, so the first visitors after a deployment do
 // not wait for them: the overview tiles of zoom 8–11 over the study area and the summary
 // statistics. The backend keeps them in the database (backend/apiCache.js), so this only
-// computes what a code change made stale. Usage: node scripts/warm-cache.mjs https://site
+// computes what a code change made stale.
+//
+// Usage: node scripts/warm-cache.mjs https://site [--wait-for <commit sha>]
+// With --wait-for it first waits, up to 15 minutes, until the site reports that commit as live
+// (GET /api/health), so it can run right after a push while Vercel is still building.
 import fs from "node:fs";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { STUDY_BOUNDS } = require("../backend/studyArea.js");
-const base = (process.argv[2] || process.env.SITE_URL || "").replace(/\/$/, "");
+const args = process.argv.slice(2);
+const waitIndex = args.indexOf("--wait-for");
+const waitFor = waitIndex >= 0 ? args.splice(waitIndex, 2)[1] : null;
+const base = (args[0] || process.env.SITE_URL || "").replace(/\/$/, "");
 if (!base) {
-  console.error("Usage: node scripts/warm-cache.mjs <site URL>");
+  console.error("Usage: node scripts/warm-cache.mjs <site URL> [--wait-for <commit sha>]");
   process.exit(1);
+}
+
+if (waitFor) {
+  const deadline = Date.now() + 15 * 60 * 1000;
+  for (;;) {
+    const live = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(30000) })
+      .then((response) => response.json())
+      .then((health) => health.commit)
+      .catch(() => null);
+    if (live === waitFor) break;
+    if (Date.now() > deadline) {
+      console.error(`The site still serves ${live ?? "an unknown commit"}, not ${waitFor}.`);
+      process.exit(1);
+    }
+    console.log(`Waiting for ${waitFor.slice(0, 7)} to go live (now ${live ? live.slice(0, 7) : "unknown"})…`);
+    await new Promise((resolve) => setTimeout(resolve, 15000));
+  }
+  console.log(`${waitFor.slice(0, 7)} is live.`);
 }
 
 // The same tile URLs the map requests, including its cache-busting version.
