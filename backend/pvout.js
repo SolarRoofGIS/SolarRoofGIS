@@ -1,5 +1,7 @@
 const path = require("path");
-const { fromFile } = require("geotiff");
+// geotiff's CommonJS build require()s an ES-only dependency (quick-lru). Node 22+ allows that,
+// but Vercel's function loader does not, so the ES build is loaded with import() instead.
+const geotiff = import("geotiff");
 
 // Global Solar Atlas layers clipped to Bogor. PVOUT is the specific yield in kWh/kWp
 // (yearly total, or monthly totals in monthly/), about 1 km per pixel; OPTA is the
@@ -11,7 +13,7 @@ const PVOUT_PATH = process.env.PVOUT_PATH || path.join(PHOTOVOLTAIC_DIR, "PVOUT.
 const EDGE_SEARCH_RADIUS = 2;
 
 async function loadRaster(file) {
-  const tiff = await fromFile(file);
+  const tiff = await (await geotiff).fromFile(file);
   const image = await tiff.getImage();
   const [values, alpha] = await image.readRasters({ interleave: false });
   const [originX, originY] = image.getOrigin();
