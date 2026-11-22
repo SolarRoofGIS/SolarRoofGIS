@@ -149,7 +149,8 @@ tileRoute("buildings", BUILDING_ZOOMS, buildingTile);
 tileRoute("overview", OVERVIEW_ZOOMS, overviewTile);
 
 // The wide overview tiles each sum hundreds of thousands of buildings (1–3 s) and every
-// visitor starts there, so zooms 8–11 are built one by one in the background at startup.
+// visitor starts there, so on a long-running server zooms 8–11 are built one by one in the
+// background at startup.
 async function warmOverview() {
   for (let z = OVERVIEW_ZOOMS[0]; z <= 11; z += 1) {
     const n = 2 ** z;
@@ -165,6 +166,9 @@ async function warmOverview() {
     }
   }
 }
-warmOverview().catch((error) => console.error("Overview tile warm-up failed:", error));
+// A serverless function lives only for a few requests; there the CDN keeps the tiles instead.
+if (!process.env.VERCEL) {
+  warmOverview().catch((error) => console.error("Overview tile warm-up failed:", error));
+}
 
 module.exports = router;

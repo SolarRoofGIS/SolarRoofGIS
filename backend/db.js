@@ -2,9 +2,11 @@ require("dotenv").config();
 
 const { Pool } = require("pg");
 
+// A serverless function instance handles few requests at once, and Neon's pooler shares the
+// connections, so it keeps a small pool; a cold Neon compute may take a few seconds to wake.
 const connectionConfig = {
-  connectionTimeoutMillis: 5000,
-  max: 10,
+  connectionTimeoutMillis: process.env.VERCEL ? 15000 : 5000,
+  max: process.env.VERCEL ? 3 : 10,
 };
 
 if (process.env.DATABASE_URL) {

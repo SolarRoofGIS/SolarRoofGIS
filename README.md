@@ -39,6 +39,17 @@ The frontend opens at `http://localhost:3000` with three pages: Beranda (`/`, su
 
 MapLibre GL 6 ships its Web Worker as a separate module that breaks when webpack/Babel bundles it, so `npm start` and `npm run build` first copy `node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs` into `public/` (the copy is gitignored). The map needs a browser with WebGL2; without it the map page shows an explanation instead.
 
+## Deployment
+
+Production runs on Vercel with the database on Neon (Singapore, PostgreSQL 17 + PostGIS). The Vercel project is linked to this GitHub repository, so every push to `main` deploys again; other branches get preview deployments.
+
+- [`vercel.json`](vercel.json) builds the frontend into `frontend/build` and rewrites every `/api/*` request to one serverless function, [`api/index.js`](api/index.js), which runs the same Express app as the local server ([`backend/app.js`](backend/app.js)). The Global Solar Atlas rasters are bundled with the function.
+- The function reads `DATABASE_URL` (Neon's pooled connection string), set as a sensitive environment variable in the Vercel project, never in the repository.
+- On Vercel the read-only API answers (tiles, statistics, roof details) are cached by the CDN for a day, so the heavy PostGIS queries run once per deployment and region; a new deployment clears that cache.
+- The frontend calls the API on its own origin in production, and `http://localhost:5000` in development.
+
+To refresh the data on Neon, dump `public.bogor_buildings` and `public.batas_bogor` from the local database and restore them into the Neon database (see [SETUP.md](SETUP.md) for the import).
+
 ## PostGIS API
 
 The API reads `public.bogor_buildings` and `public.batas_bogor` from PostgreSQL with PostGIS enabled. Import the separately shared Google building GeoPackage through QGIS as `public.bogor_buildings`. It combines two Google Open Buildings v3 S2 cells, `2e7` and `2e5` (the western Kabupaten, Jasinga–Nanggung), each clipped to the union of the BIG Bogor polygons; footprints crossing the boundary are cut, and their source attributes are kept. Available routes:

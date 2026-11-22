@@ -1,4 +1,7 @@
-export const API_BASE_URL = (process.env.REACT_APP_API_URL || "http://localhost:5000").replace(/\/$/, "");
+// In development the API runs separately on port 5000; a production build is served together
+// with the API from the same origin (see vercel.json). REACT_APP_API_URL overrides both.
+const DEFAULT_API_URL = process.env.NODE_ENV === "production" ? window.location.origin : "http://localhost:5000";
+export const API_BASE_URL = (process.env.REACT_APP_API_URL || DEFAULT_API_URL).replace(/\/$/, "");
 
 export async function fetchJson(path, options) {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
