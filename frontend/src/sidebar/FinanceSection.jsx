@@ -23,17 +23,28 @@ function Stat({ label, value, note }) {
   );
 }
 
-// Why this many panels suit the household, in one line.
-function recommendationReason(finance, power) {
+// Why this many panels suit the household, in one line. When even the minimum is too much
+// for the connection, a smaller panel size may still fit, so that is suggested first.
+function recommendationReason(finance, power, assumptions, panelType) {
   const { recommendation } = finance;
-  if (recommendation.belowMinimum) return `Daya ${power.label} terlalu kecil, PLTS atap kurang menguntungkan.`;
+  if (recommendation.belowMinimum) {
+    const panelKw = (panel) => (panelType === "poly" ? panel.areaM2 * 0.15 : panel.powerWp / 1000);
+    const current = finance.capacityKwp / finance.panelCount;
+    const fits = assumptions.panels.filter(
+      (panel) => panelKw(panel) < current - 1e-9 && assumptions.minPanels * panelKw(panel) * 1000 <= power.va,
+    );
+    if (recommendation.limitedBy === "power" && fits.length) {
+      return `${assumptions.minPanels} panel ini melebihi daya ${power.label}. Pilih panel ${fits.map((panel) => panel.label).join(" atau ")}.`;
+    }
+    return `Daya ${power.label} terlalu kecil, PLTS atap kurang menguntungkan.`;
+  }
   if (recommendation.limitedBy === "power") return `Dibatasi daya ${power.label}: lebih dari ini, listriknya terbuang.`;
   if (recommendation.limitedBy === "use")
     return `Sesuai pemakaian Anda (~${formatNumber(finance.monthlyUseKwh)} kWh/bulan): lebih dari ini, listriknya terbuang.`;
   return "Semua panel yang muat di atap ini.";
 }
 
-function Summary({ finance, power, projectionYears, onUseRecommendation }) {
+function Summary({ finance, power, projectionYears, assumptions, panelType, onUseRecommendation }) {
   const { recommendation } = finance;
   const isRecommended = finance.panelCount === recommendation.panelCount;
   const tooLong = finance.paybackYears !== null && finance.paybackYears > projectionYears;
@@ -45,7 +56,7 @@ function Summary({ finance, power, projectionYears, onUseRecommendation }) {
           {formatNumber(finance.panelCount)} panel · {formatNumber(finance.capacityKwp, 1)} kWp
         </strong>
         {isRecommended ? (
-          <p>{recommendationReason(finance, power)}</p>
+          <p>{recommendationReason(finance, power, assumptions, panelType)}</p>
         ) : (
           <p>
             Saran: {formatNumber(recommendation.panelCount)} panel.{" "}
@@ -166,6 +177,8 @@ export default function FinanceSection({ solar, assumptions, panelChoice, onPane
             finance={finance}
             power={powerOption}
             projectionYears={options.projectionYears}
+            assumptions={assumptions}
+            panelType={panelType}
             onUseRecommendation={() => onPanelChoiceChange(null)}
           />
         )}

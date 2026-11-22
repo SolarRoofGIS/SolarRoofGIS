@@ -1,6 +1,7 @@
 const express = require("express");
 const { errorDetail } = require("../httpErrors");
 const { STUDY_BOUNDS } = require("../studyArea");
+const { remember } = require("../apiCache");
 const pool = require("../db");
 const { panelCountSql, pvoutGridParams, pvoutSql, PANEL_KWP } = require("../buildingSql");
 
@@ -108,11 +109,13 @@ async function overviewTile(z, x, y) {
   return rows[0]?.tile;
 }
 
-// Caches the promise so simultaneous requests for one tile share a single query.
+// Caches the promise so simultaneous requests for one tile share a single query. Overview
+// tiles, which sum many buildings, are also kept in the database (see apiCache.js).
 function cachedTile(name, build, z, x, y) {
   const key = `${name}/${z}/${x}/${y}`;
   if (!tileCache.has(key)) {
-    const pending = build(z, x, y).then((tile) => tile || Buffer.alloc(0));
+    const make = () => build(z, x, y).then((tile) => tile || Buffer.alloc(0));
+    const pending = name === "overview" ? remember(`tile/${key}`, make) : make();
     if (tileCache.size >= CACHE_LIMIT) tileCache.delete(tileCache.keys().next().value);
     tileCache.set(key, pending);
     pending.catch(() => tileCache.delete(key));

@@ -1,12 +1,14 @@
 const express = require("express");
 const { errorDetail } = require("../httpErrors");
+const { remember } = require("../apiCache");
 const pool = require("../db");
 const { panelCountSql, pvoutGridParams, pvoutSql, PANEL_KWP } = require("../buildingSql");
 
 const router = express.Router();
 
 // Totals for the home page, per region. Counting 2.7 million building centroids against
-// the boundaries takes ~15 s even with subdivided polygons, so it runs once at startup.
+// the boundaries takes 15–30 s even with subdivided polygons, so the result is kept in the
+// database (see apiCache.js) and a long-running server computes it at startup.
 async function computeStats() {
   const grid = await pvoutGridParams();
   const { rows } = await pool.query(
@@ -65,14 +67,16 @@ async function computeStats() {
 let statsPromise = null;
 function statsReady() {
   if (!statsPromise) {
-    statsPromise = computeStats().catch((error) => {
-      statsPromise = null;
-      throw error;
-    });
+    statsPromise = remember("stats", async () => Buffer.from(JSON.stringify(await computeStats())))
+      .then((body) => JSON.parse(body.toString("utf8")))
+      .catch((error) => {
+        statsPromise = null;
+        throw error;
+      });
   }
   return statsPromise;
 }
-statsReady().catch((error) => console.error("Summary statistics failed:", error));
+if (!process.env.VERCEL) statsReady().catch((error) => console.error("Summary statistics failed:", error));
 
 router.get("/", async (_request, response) => {
   try {

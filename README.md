@@ -45,7 +45,9 @@ Production runs on Vercel with the database on Neon (Singapore, PostgreSQL 17 + 
 
 - [`vercel.json`](vercel.json) builds the frontend into `frontend/build` and rewrites every `/api/*` request to one serverless function, [`api/index.js`](api/index.js), which runs the same Express app as the local server ([`backend/app.js`](backend/app.js)). The Global Solar Atlas rasters are bundled with the function.
 - The function reads `DATABASE_URL` (Neon's pooled connection string), set as a sensitive environment variable in the Vercel project, never in the repository.
-- On Vercel the read-only API answers (tiles, statistics, roof details) are cached by the CDN for a day, so the heavy PostGIS queries run once per deployment and region; a new deployment clears that cache.
+- The heavy answers, the overview tiles and the summary statistics (15–30 s each on Neon), are stored in the `public.api_cache` table ([`backend/apiCache.js`](backend/apiCache.js)), so they survive cold starts and deployments. Rows are versioned by the code that computes them, so changing that code recomputes them; after re-importing the building data, run `TRUNCATE public.api_cache;`.
+- On Vercel the read-only API answers are also cached by the CDN for a day per region; a new deployment clears that cache.
+- After each production deployment, the [Warm cache after deploy](.github/workflows/warm-cache.yml) workflow runs [`scripts/warm-cache.mjs`](scripts/warm-cache.mjs) to request the overview tiles of zoom 8–11 and the statistics once. The [Test](.github/workflows/test.yml) workflow runs the backend tests and a CI-mode frontend build on every push.
 - The frontend calls the API on its own origin in production, and `http://localhost:5000` in development.
 
 To refresh the data on Neon, dump `public.bogor_buildings` and `public.batas_bogor` from the local database and restore them into the Neon database (see [SETUP.md](SETUP.md) for the import).

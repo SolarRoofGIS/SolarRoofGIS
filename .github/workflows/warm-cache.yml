@@ -1,0 +1,18 @@
+# After Vercel finishes a production deployment, request the heavy API answers once so the
+# first visitors do not wait for them (see scripts/warm-cache.mjs).
+name: Warm cache after deploy
+
+on:
+  deployment_status:
+
+jobs:
+  warm:
+    if: github.event.deployment_status.state == 'success' && startsWith(github.event.deployment.environment, 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/warm-cache.mjs https://solarroofgis.vercel.app
