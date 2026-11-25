@@ -399,4 +399,10 @@
   .steps {
     grid-template-columns: 1fr;
   }
+
+  /* On a phone the assumption values wrap instead of widening the page. */
+  .assumption-table th,
+  .assumption-table td {
+    white-space: normal;
+  }
 }

@@ -75,7 +75,7 @@ export default function MapPage() {
   customEstimatesRef.current = customEstimates;
   const phone = useMediaQuery(PHONE_LAYOUT);
   // /peta?atap=<id> opens with that roof selected and the map centered on it.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const linkedId = searchParams.get("atap");
   const centeredLinkRef = useRef(null);
 
@@ -175,8 +175,18 @@ export default function MapPage() {
     [activeDetail, shownPanels],
   );
 
+  // The selected database roof goes in the address, so the view can be shared or reopened.
+  // A roof chosen on the map is already on screen, so the map does not fly to it again.
+  const linkRoof = (id) => {
+    const value = id === null ? null : String(id);
+    if (value === linkedId) return;
+    if (value !== null) centeredLinkRef.current = value;
+    setSearchParams(value === null ? {} : { atap: value }, { replace: true });
+  };
+
   const addCustomRoof = (roof) => {
     resetPanelChoice();
+    linkRoof(null);
     setCustomRoofs((roofs) => [...roofs, roof].slice(-MAX_DRAWN_ROOFS));
     setSelectedId(null);
     setSelectedCustomId(roof.id);
@@ -186,11 +196,13 @@ export default function MapPage() {
     if (id !== selectedId) resetPanelChoice();
     setSelectedCustomId(null);
     setSelectedId(id);
+    linkRoof(id);
     setPanelCollapsed(false);
   };
   const selectCustom = (id) => {
     if (id !== selectedCustomId) resetPanelChoice();
     setSelectedId(null);
+    linkRoof(null);
     setSelectedCustomId(id);
     setTool("off");
     setPanelCollapsed(false);
@@ -198,6 +210,7 @@ export default function MapPage() {
   const clearSelection = () => {
     resetPanelChoice();
     setSelectedId(null);
+    linkRoof(null);
     setSelectedCustomId(null);
     setTool("off");
   };
@@ -205,6 +218,7 @@ export default function MapPage() {
   const stopTool = () => setTool("off");
   const startDrawing = () => {
     setSelectedId(null);
+    linkRoof(null);
     setSelectedCustomId(null);
     setTool("draw");
     // On phones the sheet would cover the roof being traced.

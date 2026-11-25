@@ -50,8 +50,9 @@ async function buildingTile(z, x, y) {
               ST_Transform(ST_TileEnvelope($1, $2, $3), 4326) AS geom_4326
      ),
      features AS (
+       -- The same footprint area as the roof panel (UTM), not the dataset's own estimate.
        SELECT b.id,
-              round(b.area_in_meters)::int AS area,
+              round(ST_Area(ST_Transform(b.geom, 32748)))::int AS area,
               round(${pvoutSql("b", 5)})::int AS pvout,
               ST_AsMVTGeom(ST_Transform(b.geom, 3857), bounds.geom_3857, $4, 64, true) AS geom
        FROM public.bogor_buildings AS b, bounds
