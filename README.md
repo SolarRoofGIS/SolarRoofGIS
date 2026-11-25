@@ -50,7 +50,7 @@ Production runs on Vercel with the database on Neon (Singapore, PostgreSQL 17 + 
 - After each push to `main`, the [Warm cache after deploy](.github/workflows/warm-cache.yml) workflow waits until production serves the pushed commit (`/api/health` reports it) and runs [`scripts/warm-cache.mjs`](scripts/warm-cache.mjs) to request the overview tiles of zoom 8–11 and the statistics once. The [Test](.github/workflows/test.yml) workflow runs the backend tests and a CI-mode frontend build on every push.
 - The frontend calls the API on its own origin in production, and `http://localhost:5000` in development.
 
-To refresh the data on Neon, dump `public.bogor_buildings` and `public.batas_bogor` from the local database and restore them into the Neon database (see [SETUP.md](SETUP.md) for the import).
+To refresh or restore the data on Neon, dump `public.bogor_buildings` and `public.batas_bogor` from the local database and restore them into the Neon database; the commands, and Neon's 6-hour point-in-time restore, are in [SETUP.md](SETUP.md#7-memulihkan-database-production-neon).
 
 ## PostGIS API
 

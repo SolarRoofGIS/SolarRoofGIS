@@ -15,6 +15,8 @@ const statsRoute = require("./routes/stats");
 const tilesRoute = require("./routes/tiles");
 
 const app = express();
+// Do not advertise the server framework in every response.
+app.disable("x-powered-by");
 
 app.use(cors());
 app.use(express.json());

@@ -141,6 +141,26 @@ npm start
 
 Browser terbuka di <http://localhost:3000>. Peta membutuhkan browser dengan WebGL2 (Chrome, Edge, Firefox, Safari versi baru).
 
+## 7. Memulihkan database production (Neon)
+
+Production memakai database Neon. Ada dua cara memulihkannya bila data rusak atau terhapus.
+
+**Kejadian kurang dari 6 jam yang lalu.** Neon menyimpan riwayat 6 jam. Di Neon Console, buka project `solarroofgis` → *Branches* → branch `main` → *Restore*, lalu pilih waktu sebelum kejadian. Aplikasi langsung memakai data hasil restore.
+
+**Lebih dari 6 jam, atau dari awal.** Salin tabel dari database lokal (langkah 3–4) ke Neon. Ambil *connection string* Neon tanpa *pooler* (Neon Console → *Connect*, matikan *Connection pooling*) dan simpan sebagai `NEON_URL` di terminal saja, jangan di file yang ikut Git.
+
+```bash
+pg_dump -Fc --no-owner -h localhost -p 5432 -U postgres -t public.bogor_buildings -t public.batas_bogor SolarRoofGIS > solarroofgis.dump
+psql "$NEON_URL" -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+pg_restore --no-owner --clean --if-exists -d "$NEON_URL" solarroofgis.dump
+psql "$NEON_URL" -c "ANALYZE public.bogor_buildings; ANALYZE public.batas_bogor; TRUNCATE public.api_cache;"
+```
+
+Sesuaikan `-p` dan `-U` dengan database lokal Anda. `TRUNCATE public.api_cache` membuang tile ringkasan dan statistik lama. Setelah itu jalankan ulang workflow *Warm cache after deploy* (GitHub → *Actions* → *Re-run jobs*) atau push commit baru, lalu cek:
+
+- <https://solarroofgis.vercel.app/api/health> berisi `"ok": true`;
+- <https://solarroofgis.vercel.app/api/stats> menunjukkan 2.666.592 bangunan.
+
 ## Masalah yang sering muncul
 
 | Gejala | Penyebab dan solusi |
