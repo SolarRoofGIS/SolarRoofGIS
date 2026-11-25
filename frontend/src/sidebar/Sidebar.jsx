@@ -4,27 +4,9 @@ import { approx, formatNumber } from "../format";
 import { pvoutCss } from "../map/colors";
 import RoofOutline from "../map/RoofOutline";
 import { geometryAreaM2 } from "../map/roofDrawing";
+import { ESTIMATE_DISCLAIMER, methodSteps, NEXT_STEPS, panelSize, regionName, sunlightLevel } from "./estimateText";
 import FinanceSection from "./FinanceSection";
 import "./Sidebar.css";
-
-function regionName(region, checked = true) {
-  if (!checked) return "Wilayah belum diketahui";
-  if (region === "Bogor") return "Kabupaten Bogor";
-  return region || "Di luar batas wilayah Bogor";
-}
-
-// How sunny the location is compared with the rest of Bogor. Every part of Bogor gets enough
-// sun for panels, so the labels compare instead of judging.
-function sunlightLevel(rank) {
-  if (rank === null) return { label: "Tidak ada data", tone: "none" };
-  if (rank >= 2 / 3) return { label: "Lebih cerah", tone: "high" };
-  if (rank >= 1 / 3) return { label: "Sedang", tone: "medium" };
-  return { label: "Lebih redup", tone: "low" };
-}
-
-function panelSize(assumptions, id) {
-  return assumptions.panels.find((size) => size.id === id);
-}
 
 function Intro({ onExplore, onDraw, customRoofs, onSelectCustom }) {
   return (
@@ -59,7 +41,6 @@ function Intro({ onExplore, onDraw, customRoofs, onSelectCustom }) {
   );
 }
 
-// What to do before installing; the estimate is only a first look from satellite imagery.
 function NextSteps() {
   return (
     <details className="sidebar-details">
@@ -68,9 +49,9 @@ function NextSteps() {
         <ChevronDown size={16} className="details-chevron" />
       </summary>
       <ol className="next-steps">
-        <li>Cek bahan dan kekuatan atap, serta bayangan pohon atau bangunan.</li>
-        <li>Minta survei dan penawaran dari beberapa installer PLTS atap.</li>
-        <li>Ajukan permohonan PLTS atap ke PLN sebelum memasang.</li>
+        {NEXT_STEPS.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
       </ol>
     </details>
   );
@@ -115,7 +96,6 @@ function BuildingDetails({ building }) {
 }
 
 function Method({ solar, assumptions }) {
-  const panel = panelSize(assumptions, solar.panel.id);
   return (
     <details className="sidebar-details">
       <summary>
@@ -123,30 +103,11 @@ function Method({ solar, assumptions }) {
         <ChevronDown size={16} className="details-chevron" />
       </summary>
       <ol className="method-list">
-        <li>
-          Luas atap dari citra satelit, dikurangi {formatNumber(assumptions.setbackM, 1)} m di setiap pinggir. Dari
-          sisanya, {formatNumber(assumptions.packingFactor * 100)}% dianggap bisa dipasangi (sisanya untuk bagian
-          miring, tandon, dan bayangan).
-        </li>
-        <li>
-          Panel {panel.powerWp} Wp ({formatNumber(panel.areaM2, 2)} m²) dihitung yang benar-benar muat disusun berbaris.
-          Atap yang muat kurang dari {assumptions.minPanels} panel dianggap belum layak.
-        </li>
-        <li>
-          Listrik = kWp × sinar matahari lokasi (Global Solar Atlas, sudah termasuk rugi inverter, kabel, debu, dan
-          panas).
-        </li>
-        <li>
-          Saran jumlah panel = paling sedikit dari: yang muat di atap, yang tidak melebihi pemakaian Anda (pengeluaran ÷
-          tarif PLN), dan yang tidak melebihi daya PLN. Kelebihan listrik yang masuk ke PLN tidak mengurangi tagihan
-          (Permen ESDM 2/2024).
-        </li>
-        <li>
-          Biaya pasang Rp{formatNumber(assumptions.finance.costRpPerKwp)} per kWp. Balik modal = biaya ÷ hemat per
-          tahun.
-        </li>
+        {methodSteps(solar, assumptions).map((step) => (
+          <li key={step}>{step}</li>
+        ))}
       </ol>
-      <p className="sidebar-muted">Perkiraan awal dari citra satelit, bukan hasil survei.</p>
+      <p className="sidebar-muted">{ESTIMATE_DISCLAIMER}</p>
     </details>
   );
 }
@@ -262,7 +223,8 @@ function Hero({ solar, assumptions, geometry, panelPlan }) {
 }
 
 // Everything below the headline figure, the same for a database roof and a drawn one.
-function EstimateSections({ solar, assumptions, panelPlan }) {
+// `place` describes the roof for the PDF report.
+function EstimateSections({ solar, assumptions, panelPlan, place, fileName }) {
   if (!solar.suitable) return null;
   return (
     <FinanceSection
@@ -271,6 +233,7 @@ function EstimateSections({ solar, assumptions, panelPlan }) {
       panelChoice={panelPlan.choice}
       onPanelChoiceChange={panelPlan.onChoiceChange}
       onRecommendation={panelPlan.onRecommendation}
+      report={{ place, panelRings: panelPlan.rings, fileName }}
     />
   );
 }
@@ -287,7 +250,20 @@ function BuildingInfo({ detail, refreshing, onReshape, panelPlan }) {
           Ubah bentuknya
         </button>
       </p>
-      <EstimateSections solar={solar} assumptions={assumptions} panelPlan={panelPlan} />
+      <EstimateSections
+        solar={solar}
+        assumptions={assumptions}
+        panelPlan={panelPlan}
+        place={{
+          region: regionName(building.region),
+          latitude: building.latitude,
+          longitude: building.longitude,
+          source: `Bangunan Google Open Buildings #${building.id}, keyakinan ${formatNumber(building.confidence * 100)}% bahwa ini bangunan.`,
+          geometry: building.geometry,
+          link: `${window.location.origin}/peta?atap=${building.id}`,
+        }}
+        fileName={`laporan-solarroofgis-atap-${building.id}.pdf`}
+      />
       <div className="sidebar-details-group">
         {solar.suitable && <NextSteps />}
         <BuildingDetails building={building} />
@@ -437,7 +413,22 @@ function CustomRoofInfo({ custom, customRoofs, onEdit, onDoneEditing, onDelete, 
             geometry={customRoof.geometry}
             panelPlan={panelPlan}
           />
-          <EstimateSections solar={detail.solar} assumptions={detail.assumptions} panelPlan={panelPlan} />
+          <EstimateSections
+            solar={detail.solar}
+            assumptions={detail.assumptions}
+            panelPlan={panelPlan}
+            place={{
+              region: regionName(detail.roof.region, detail.roof.regionChecked),
+              latitude: detail.roof.latitude,
+              longitude: detail.roof.longitude,
+              source: customRoof.basedOn
+                ? `Atap yang digambar di SolarRoofGIS, diubah dari bangunan Google Open Buildings #${customRoof.basedOn.id}.`
+                : "Atap yang digambar di SolarRoofGIS.",
+              geometry: customRoof.geometry,
+              link: null,
+            }}
+            fileName={`laporan-solarroofgis-atap-${Math.round(detail.solar.footprintM2)}m2.pdf`}
+          />
           <div className="sidebar-details-group">
             {detail.solar.suitable && <NextSteps />}
             <CustomDetails customRoof={customRoof} detail={detail} />

@@ -2,17 +2,12 @@ import { useEffect, useState } from "react";
 import { fetchFinanceEstimate } from "../api";
 import { approx, approxRupiah, formatNumber } from "../format";
 import EstimateDetails from "./EstimateDetails";
+import { recommendationReason, savingNote } from "./estimateText";
+import ReportButton from "./ReportButton";
 import SectionTitle from "./SectionTitle";
 
 const ESTIMATE_DELAY_MS = 250;
 const MAX_BILL_DIGITS = 12;
-// One short line under each figure, only where the number needs it.
-function savingNote(finance) {
-  if (finance.limitedByBill) return "Maksimal sebesar pengeluaran Anda";
-  if (finance.monthlyBillRp === null) return "Isi pengeluaran untuk hasil lebih tepat";
-  return null;
-}
-
 function Stat({ label, value, note }) {
   return (
     <div className="stat">
@@ -23,40 +18,29 @@ function Stat({ label, value, note }) {
   );
 }
 
-// Why this many panels suit the household, in one line. When even the minimum is too much
-// for the connection, a smaller panel size may still fit, so that is suggested first.
-function recommendationReason(finance, power, assumptions, panelType) {
+// The heading and one-line explanation of the summary box, shared with the PDF report.
+function summaryText(finance, power, assumptions, panelType) {
   const { recommendation } = finance;
-  if (recommendation.belowMinimum) {
-    const panelKw = (panel) => (panelType === "poly" ? panel.areaM2 * 0.15 : panel.powerWp / 1000);
-    const current = finance.capacityKwp / finance.panelCount;
-    const fits = assumptions.panels.filter(
-      (panel) => panelKw(panel) < current - 1e-9 && assumptions.minPanels * panelKw(panel) * 1000 <= power.va,
-    );
-    if (recommendation.limitedBy === "power" && fits.length) {
-      return `${assumptions.minPanels} panel ini melebihi daya ${power.label}. Pilih panel ${fits.map((panel) => panel.label).join(" atau ")}.`;
-    }
-    return `Daya ${power.label} terlalu kecil, PLTS atap kurang menguntungkan.`;
+  if (finance.panelCount === recommendation.panelCount) {
+    return { label: "Saran untuk rumah Anda", reason: recommendationReason(finance, power, assumptions, panelType) };
   }
-  if (recommendation.limitedBy === "power") return `Dibatasi daya ${power.label}: lebih dari ini, listriknya terbuang.`;
-  if (recommendation.limitedBy === "use")
-    return `Sesuai pemakaian Anda (~${formatNumber(finance.monthlyUseKwh)} kWh/bulan): lebih dari ini, listriknya terbuang.`;
-  return "Semua panel yang muat di atap ini.";
+  return { label: "Pilihan Anda", reason: `Saran: ${formatNumber(recommendation.panelCount)} panel.` };
 }
 
 function Summary({ finance, power, projectionYears, assumptions, panelType, onUseRecommendation }) {
   const { recommendation } = finance;
   const isRecommended = finance.panelCount === recommendation.panelCount;
+  const text = summaryText(finance, power, assumptions, panelType);
   const tooLong = finance.paybackYears !== null && finance.paybackYears > projectionYears;
   return (
     <div className={`finance-summary${recommendation.belowMinimum ? " is-weak" : ""}`}>
       <div className="finance-summary-head">
-        <span>{isRecommended ? "Saran untuk rumah Anda" : "Pilihan Anda"}</span>
+        <span>{text.label}</span>
         <strong>
           {formatNumber(finance.panelCount)} panel · {formatNumber(finance.capacityKwp, 1)} kWp
         </strong>
         {isRecommended ? (
-          <p>{recommendationReason(finance, power, assumptions, panelType)}</p>
+          <p>{text.reason}</p>
         ) : (
           <p>
             Saran: {formatNumber(recommendation.panelCount)} panel.{" "}
@@ -83,8 +67,16 @@ function Summary({ finance, power, projectionYears, assumptions, panelType, onUs
 // The household inputs and what they lead to: recommended size, cost, savings and payback from
 // the backend, recalculated as the inputs change. The panel count is kept by the map page, since
 // the roof drawing and the map show it too; left empty it follows the recommendation, which is
-// reported back up.
-export default function FinanceSection({ solar, assumptions, panelChoice, onPanelChoiceChange, onRecommendation }) {
+// reported back up. `report` describes the place for the PDF report: region, coordinates,
+// source line, outline, the panels drawn on it and the file name.
+export default function FinanceSection({
+  solar,
+  assumptions,
+  panelChoice,
+  onPanelChoiceChange,
+  onRecommendation,
+  report,
+}) {
   const options = assumptions.finance;
   const [power, setPower] = useState(options.defaultPower);
   const [bill, setBill] = useState(String(options.defaultMonthlyBillRp));
@@ -132,6 +124,21 @@ export default function FinanceSection({ solar, assumptions, panelChoice, onPane
   }, [requestedCount, maxPanels, pvout, bill, panelType, panel.id, power, onRecommendation]);
 
   const finance = estimate.status === "ready" ? estimate.finance : null;
+  const panelTypeOption = options.panelTypes.find((type) => type.id === panelType);
+  const getReport = () => ({
+    place: report.place,
+    panelRings: report.panelRings,
+    fileName: report.fileName,
+    solar,
+    assumptions,
+    finance,
+    household: {
+      power: powerOption.label,
+      monthlyBillRp: bill === "" ? null : Number(bill),
+      panelType: `${panelTypeOption.label} (${formatNumber((panelTypeOption.efficiency ?? panelEfficiency) * 100)}%)`,
+    },
+    summary: summaryText(finance, powerOption, assumptions, panelType),
+  });
   return (
     <>
       <section className="sidebar-section">
@@ -213,6 +220,7 @@ export default function FinanceSection({ solar, assumptions, panelChoice, onPane
             </select>
           </label>
         </div>
+        {finance && <ReportButton getReport={getReport} />}
       </section>
       {finance && <EstimateDetails solar={solar} finance={finance} assumptions={assumptions} />}
     </>

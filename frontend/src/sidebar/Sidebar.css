@@ -772,3 +772,13 @@
   pointer-events: none;
   white-space: nowrap;
 }
+
+/* The PDF report button under the household inputs. */
+.report-download {
+  margin-top: 14px;
+}
+
+.report-download .sidebar-error {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+}
