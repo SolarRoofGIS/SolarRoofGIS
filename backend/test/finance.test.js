@@ -40,6 +40,22 @@ test("savings never exceed the bill, and payback is cost over yearly savings", (
   assert.equal(result.investmentRp, Math.round(result.capacityKwp * FINANCE.costRpPerKwp));
 });
 
+test("without a bill, savings stop at what the connected power can use", () => {
+  const power = powerById("1300");
+  const result = estimateFinance({ ...base, maxPanels: 243, panelCount: 243, monthlyBillRp: null, power });
+  const usable = Math.round(((1.3 * base.pvout) / 12) * power.tariffRpPerKwh);
+  assert.equal(result.monthlySavingRp, usable);
+  assert.equal(result.limitedByPower, true);
+  assert.equal(result.limitedByBill, false);
+  assert.ok(result.monthlySavingRp < result.monthlyProductionRp);
+});
+
+test("a system within the connected power keeps its full savings", () => {
+  const result = estimateFinance({ ...base, panelCount: 2, monthlyBillRp: null, power: powerById("1300") });
+  assert.equal(result.monthlySavingRp, result.monthlyProductionRp);
+  assert.equal(result.limitedByPower, false);
+});
+
 test("polycrystalline panels give less capacity on the same roof", () => {
   const mono = estimateFinance({ ...base, panelCount: 10, monthlyBillRp: null });
   const poly = estimateFinance({ ...base, panelCount: 10, monthlyBillRp: null, panelType: "poly" });

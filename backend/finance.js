@@ -70,7 +70,9 @@ function recommend({ maxPanels, monthlyUseKwh, pvout, panelKw, va }) {
 // `maxPanels` is what the roof holds; `monthlyBillRp` may be null when not entered.
 //
 // Since Permen ESDM 2/2024 power sent to the grid no longer reduces the bill, so the savings
-// can never exceed the bill itself.
+// can never exceed the bill itself. Nor can they exceed what a system as large as the connected
+// power produces: a house never draws more than that at once, so the rest goes to waste. This
+// matters most when no bill is entered and the viewer picks far more panels than suggested.
 function estimateFinance({
   panelCount = null,
   maxPanels,
@@ -92,7 +94,8 @@ function estimateFinance({
   const annualKwh = capacityKwp * pvout;
   const investmentRp = capacityKwp * FINANCE.costRpPerKwp;
   const monthlyProductionRp = (annualKwh / 12) * power.tariffRpPerKwh;
-  const monthlySavingRp = hasBill ? Math.min(monthlyProductionRp, monthlyBillRp) : monthlyProductionRp;
+  const usableProductionRp = ((Math.min(capacityKwp, power.va / 1000) * pvout) / 12) * power.tariffRpPerKwh;
+  const monthlySavingRp = Math.min(monthlyProductionRp, usableProductionRp, hasBill ? monthlyBillRp : Infinity);
   const annualSavingRp = monthlySavingRp * 12;
 
   return {
@@ -110,7 +113,8 @@ function estimateFinance({
     monthlyBillRp: hasBill ? monthlyBillRp : null,
     monthlyProductionRp: round(monthlyProductionRp),
     monthlySavingRp: round(monthlySavingRp),
-    limitedByBill: hasBill && monthlyProductionRp > monthlyBillRp,
+    limitedByBill: hasBill && monthlyProductionRp > monthlyBillRp && monthlyBillRp <= usableProductionRp,
+    limitedByPower: usableProductionRp < monthlyProductionRp && (!hasBill || usableProductionRp < monthlyBillRp),
     paybackYears: annualSavingRp > 0 ? round(investmentRp / annualSavingRp, 1) : null,
     // Cumulative spending per year with and without panels; it needs a bill to compare with.
     projection: hasBill

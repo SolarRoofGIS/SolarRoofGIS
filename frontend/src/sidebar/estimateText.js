@@ -37,13 +37,14 @@ export function methodSteps(solar, assumptions) {
     `Panel ${panel.powerWp} Wp (${formatNumber(panel.areaM2, 2)} m²) dihitung yang benar-benar muat disusun berbaris. Atap yang muat kurang dari ${assumptions.minPanels} panel dianggap belum layak.`,
     "Listrik = kWp × sinar matahari lokasi (Global Solar Atlas, sudah termasuk rugi inverter, kabel, debu, dan panas).",
     "Saran jumlah panel = paling sedikit dari: yang muat di atap, yang tidak melebihi pemakaian Anda (pengeluaran ÷ tarif PLN), dan yang tidak melebihi daya PLN. Kelebihan listrik yang masuk ke PLN tidak mengurangi tagihan (Permen ESDM 2/2024).",
-    `Biaya pasang Rp${formatNumber(assumptions.finance.costRpPerKwp)} per kWp. Balik modal = biaya ÷ hemat per tahun.`,
+    `Biaya pasang Rp${formatNumber(assumptions.finance.costRpPerKwp)} per kWp. Hemat paling banyak sebesar tagihan Anda dan sebesar listrik dari panel seukuran daya PLN. Balik modal = biaya ÷ hemat per tahun.`,
   ];
 }
 
 // One short line under a saving figure, only where the number needs it.
 export function savingNote(finance) {
   if (finance.limitedByBill) return "Maksimal sebesar pengeluaran Anda";
+  if (finance.limitedByPower) return "Maksimal sebesar yang bisa dipakai daya PLN Anda";
   if (finance.monthlyBillRp === null) return "Isi pengeluaran untuk hasil lebih tepat";
   return null;
 }

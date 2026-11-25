@@ -164,7 +164,8 @@ function MethodSteps({ assumptions }) {
         <p>
           Biaya pasang dihitung {value(`Rp${formatNumber(a?.finance.costRpPerKwp)}`)} per kWp (85% panel dan inverter,
           15% rangka, kabel, dan pemasangan). Penghematan = listrik dari panel × tarif PLN untuk daya rumah, paling
-          banyak sebesar pengeluaran listrik.
+          banyak sebesar pengeluaran listrik dan sebesar listrik dari panel seukuran daya PLN rumah, karena sisanya
+          terbuang.
         </p>
         <p className="formula">balik modal (tahun) = biaya pasang ÷ penghematan per tahun</p>
       </li>
